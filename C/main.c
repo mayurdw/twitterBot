@@ -12,10 +12,11 @@
 #include <curl/curl.h>
 #include <string.h>
 #include <dirent.h>
+#include <libxml/parser.h>
 
 #define MAX_FILENAME_LEN    16
 #define BLOG_FEED_URL       "https://itsmayurremember.wordpress.com/feed"
-#define FILENAME_EXT        ".feed"
+#define FILENAME_EXT        ".xml"
 #define CONFIG_FILENAME     "CONFIG"
 #define FILENAME_KEY        "FEEDFILE"
 
@@ -126,8 +127,54 @@ static ERROR_CODE GetLastFeedFilename( char *pszFilename, uint32_t ulFilename)
 {
     return NO_ERROR;
 }
+ 
+int is_leaf(xmlNode * node)
+{
+  xmlNode * child = node->children;
+  while(child)
+  {
+    if(child->type == XML_ELEMENT_NODE) return 0;
+ 
+    child = child->next;
+  }
+ 
+  return 1;
+}
+ 
+void print_xml(xmlNode * node, int indent_len)
+{
+    while(node)
+    {
+        if(node->type == XML_ELEMENT_NODE)
+        {
+          printf("%*c%s:%s\n", indent_len*2, '-', node->name, is_leaf(node)?xmlNodeGetContent(node):xmlGetProp(node, "id"));
+        }
+        print_xml(node->children, indent_len + 1);
+        node = node->next;
+    }
+}
 
 int main( )
 {
+    xmlDoc *doc = NULL;
+    xmlNode *root_element = NULL;
+    char szFilename[MAX_FILENAME_LEN+1]={0,};
+
+    DownloadFeedFile( BLOG_FEED_URL );
+    GenerateFileName(szFilename, sizeof( szFilename ));
+
+    doc = xmlReadFile(szFilename, NULL, 0);
+
+    if (doc == NULL) {
+    printf("Could not parse the XML file");
+    }
+
+    root_element = xmlDocGetRootElement(doc);
+
+    print_xml(root_element, 1);
+
+    xmlFreeDoc(doc);
+
+    xmlCleanupParser();
     return 0;
 }
