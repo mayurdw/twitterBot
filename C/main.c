@@ -32,60 +32,12 @@ typedef struct
   FILE *psStream;
 } RSS_FILE_STREAM;
 
-typedef enum
-{
-    FILE_UPDATE_DATE = 0,
-
-    // Add config items above this
-    LAST_CONFIG
-} CONFIG_NAME;
-
-typedef struct 
-{
-    char szKey[16+1];
-    char szValue[MAX_FILENAME_LEN+1];
-} CONFIG_KEY_VALUE_PAIR;
-
 static const char* s_pszFileFormat = "%04i%02i%02i" FILENAME_EXT;
-static CONFIG_KEY_VALUE_PAIR s_asConfig[LAST_CONFIG] = 
-{ "FILE_UPDATE", "" };
-
 // Static Functions
 static ERROR_CODE GenerateFileName( char *pszFileName, uint32_t ulBufferSize );
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream);
 static ERROR_CODE DownloadFeedFile( const char *pszURL );
 static bool FeedFileExists( void );
-static ERROR_CODE InitConfig(void);
-static ERROR_CODE UpdateConfig(CONFIG_NAME eConfig, const char *pszValue );
-
-static ERROR_CODE InitConfig(void)
-{
-    const char *pszConfigFileName = "CONFIG.SYS";
-    FILE *psConfigFile = fopen(pszConfigFileName, "wb+");
-    char szBuffer[128+1]={0,};
-    int iRet = 0;
-
-    if( psConfigFile == NULL )
-    {
-        return FILE_ERROR;
-    }
-
-    fgets( szBuffer, sizeof( szBuffer ), psConfigFile );
-
-    if( strlen( szBuffer ) == 0 )
-    {
-        GenerateFileName(s_asConfig[FILE_UPDATE_DATE].szValue, 
-        sizeof(s_asConfig[FILE_UPDATE_DATE].szValue));
-
-        snprintf( szBuffer, sizeof(szBuffer), "%s=%s",
-        s_asConfig[FILE_UPDATE_DATE].szKey, s_asConfig[FILE_UPDATE_DATE].szValue);
-
-        fputs( szBuffer, psConfigFile);
-    }
-    
-    fclose(psConfigFile);
-}
-
 
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream)
 {
@@ -177,6 +129,5 @@ static ERROR_CODE GetLastFeedFilename( char *pszFilename, uint32_t ulFilename)
 
 int main( )
 {
-    InitConfig();
     return 0;
 }
