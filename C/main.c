@@ -17,7 +17,6 @@
 #define MAX_FILENAME_LEN    16
 #define BLOG_FEED_URL       "https://itsmayurremember.wordpress.com/feed"
 #define FILENAME_EXT        ".xml"
-#define CONFIG_FILENAME     "CONFIG"
 #define FILENAME_KEY        "FEEDFILE"
 
 typedef enum
@@ -39,6 +38,7 @@ static ERROR_CODE GenerateFileName( char *pszFileName, uint32_t ulBufferSize );
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream);
 static ERROR_CODE DownloadFeedFile( const char *pszURL );
 static bool FeedFileExists( void );
+static ERROR_CODE initConfig(void);
 
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream)
 {
@@ -154,27 +154,48 @@ void print_xml(xmlNode * node, int indent_len)
     }
 }
 
-int main( )
+static ERROR_CODE InitConfig(void)
 {
-    xmlDoc *doc = NULL;
-    xmlNode *root_element = NULL;
-    char szFilename[MAX_FILENAME_LEN+1]={0,};
+    xmlDocPtr doc = NULL;       /* document pointer */
+    xmlNodePtr root_node = NULL, node = NULL;/* node pointers */
+    char buff[256] = {0,};
+    int i = 0, j = 0;
 
-    DownloadFeedFile( BLOG_FEED_URL );
-    GenerateFileName(szFilename, sizeof( szFilename ));
+    LIBXML_TEST_VERSION;
 
-    doc = xmlReadFile(szFilename, NULL, 0);
+    /* 
+     * Creates a new document, a node and set it as a root node
+     */
+    doc = xmlNewDoc(BAD_CAST "1.0");
+    root_node = xmlNewNode(NULL, BAD_CAST "root");
+    xmlDocSetRootElement(doc, root_node);
 
-    if (doc == NULL) {
-    printf("Could not parse the XML file");
-    }
+    /* 
+     * xmlNewChild() creates a new node, which is "attached" as child node
+     * of root_node node. 
+     */
+    xmlNewChild(root_node, NULL, BAD_CAST "currentFilename",
+                BAD_CAST "26122019.xml");
+    xmlNewChild(root_node,NULL, BAD_CAST "daysToFileUpdate", BAD_CAST "14");
 
-    root_element = xmlDocGetRootElement(doc);
+    /* 
+     * Dumping document to stdio or file
+     */
+    xmlSaveFormatFileEnc("config.xml", doc, "UTF-8", 1);
 
-    print_xml(root_element, 1);
-
+    /*free the document */
     xmlFreeDoc(doc);
 
+    /*
+     *Free the global variables that may
+     *have been allocated by the parser.
+     */
     xmlCleanupParser();
+
+    return NO_ERROR;
+}
+
+int main( )
+{
     return 0;
 }
