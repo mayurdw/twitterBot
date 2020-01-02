@@ -13,17 +13,21 @@
 #include <string.h>
 #include <dirent.h>
 #include <libxml/parser.h>
+#include <libxml/xmlreader.h>
 
 #define MAX_FILENAME_LEN    16
 #define BLOG_FEED_URL       "https://itsmayurremember.wordpress.com/feed"
 #define FILENAME_EXT        ".xml"
 #define FILENAME_KEY        "FEEDFILE"
+#define CONFIG_FILENAME     "config.xml"
 
 typedef enum
 {
     NO_ERROR = 0,
     INVALID_ARG,
     FILE_ERROR,
+    CONFIG_VALIDATION_ERROR,
+    XML_PARSING_ERROR,
 } ERROR_CODE;
 
 typedef struct 
@@ -38,7 +42,7 @@ static ERROR_CODE GenerateFileName( char *pszFileName, uint32_t ulBufferSize );
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream);
 static ERROR_CODE DownloadFeedFile( const char *pszURL );
 static bool FeedFileExists( void );
-static ERROR_CODE initConfig(void);
+static ERROR_CODE InitConfig(void);
 
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream)
 {
@@ -181,7 +185,7 @@ static ERROR_CODE InitConfig(void)
     /* 
      * Dumping document to stdio or file
      */
-    xmlSaveFormatFileEnc("config.xml", doc, "UTF-8", 1);
+    xmlSaveFormatFileEnc(CONFIG_FILENAME, doc, "UTF-8", 1);
 
     /*free the document */
     xmlFreeDoc(doc);
@@ -195,7 +199,110 @@ static ERROR_CODE InitConfig(void)
     return NO_ERROR;
 }
 
-int main( )
+/**
+ * processNode:
+ * @reader: the xmlReader
+ *
+ * Dump information about the current node
+ */
+static void
+processNode(xmlTextReaderPtr reader) {
+    const xmlChar *name, *value;
+
+    name = xmlTextReaderConstName(reader);
+    if (name == NULL)
+	name = BAD_CAST "--";
+
+    value = xmlTextReaderConstValue(reader);
+
+    printf("%d %d %s %d %d", 
+	    xmlTextReaderDepth(reader),
+	    xmlTextReaderNodeType(reader),
+	    name,
+	    xmlTextReaderIsEmptyElement(reader),
+	    xmlTextReaderHasValue(reader));
+    if (value == NULL)
+	printf("\n");
+    else {
+        if (xmlStrlen(value) > 40)
+            printf(" %.40s...\n", value);
+        else
+	    printf(" %s\n", value);
+    }
+}
+
+/**
+ * streamFile:
+ * @filename: the file name to parse
+ *
+ * Parse, validate and print information about an XML file.
+ */
+static void
+streamFile(const char *filename) {
+    
+}
+
+ERROR_CODE ReadConfig( void )
 {
-    return 0;
+  ERROR_CODE eRet = NO_ERROR;
+  xmlTextReaderPtr pReader = NULL;
+  int iRet = 0;
+
+  /*
+    * Pass some special parsing options to activate DTD attribute defaulting,
+    * entities substitution and DTD validation
+  */
+  pReader = xmlReaderForFile(CONFIG_FILENAME, NULL,
+                XML_PARSE_RECOVER ); /* validate with the DTD */
+
+  if (pReader != NULL) 
+  {
+    iRet = xmlTextReaderRead(pReader);
+    while (iRet == 1) 
+    {
+        processNode(pReader);
+        iRet = xmlTextReaderRead(pReader);
+    }
+  
+  /*
+	 * Once the document has been fully parsed check the validation results
+	 */
+  if (xmlTextReaderIsValid(pReader) != 1) 
+  {
+    eRet = CONFIG_VALIDATION_ERROR;
+	}
+  
+  xmlFreeTextReader(pReader);
+  if (iRet != 0) {
+    eRet = XML_PARSING_ERROR;
+  }
+  } 
+  else 
+  {
+    eRet = FILE_ERROR;
+  }
+
+
+    // /*
+    //  * Cleanup function for the XML library.
+    //  */
+    xmlCleanupParser();
+    // /*
+    //  * this is to debug memory for regression tests
+    //  */
+    xmlMemoryDump();
+
+  return eRet; 
+}
+
+int main() 
+{
+
+    if( ReadConfig() != NO_ERROR )
+    {
+      printf( "Error with reading config file\n");
+      InitConfig();
+    }
+    
+    return(0);
 }
