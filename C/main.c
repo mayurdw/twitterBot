@@ -15,11 +15,11 @@
 #include <libxml/parser.h>
 #include <libxml/xmlreader.h>
 
-#define MAX_FILENAME_LEN    16
-#define BLOG_FEED_URL       "https://itsmayurremember.wordpress.com/feed"
-#define FILENAME_EXT        ".xml"
-#define FILENAME_KEY        "FEEDFILE"
-#define CONFIG_FILENAME     "config.xml"
+#define MAX_FILENAME_LEN        16
+#define BLOG_FEED_URL           "https://itsmayurremember.wordpress.com/feed"
+#define FILENAME_KEY            "FEEDFILE"
+#define CONFIG_FILENAME         "config.xml"
+#define DAYS_UNTIL_NEXT_UPDATE  "14"
 
 typedef enum
 {
@@ -27,7 +27,6 @@ typedef enum
     INVALID_ARG,
     FILE_ERROR,
     CONFIG_VALIDATION_ERROR,
-    XML_PARSING_ERROR,
 } ERROR_CODE;
 
 typedef struct 
@@ -36,13 +35,22 @@ typedef struct
   FILE *psStream;
 } RSS_FILE_STREAM;
 
-static const char* s_pszFileFormat = "%04i%02i%02i" FILENAME_EXT;
+typedef enum 
+{
+  CONFIG_CURRENT_FILENAME = 0,
+  CONFIG_DAYS_UNTIL_UPDATE,
+
+  CONFIG_LAST
+}CONFIG_KEYS;
+
+static const char* s_pszFileFormat = "%04i%02i%02i.xml";
+static char s_aszConfigs[CONFIG_LAST][MAX_FILENAME_LEN+1] = {0,};
 // Static Functions
 static ERROR_CODE GenerateFileName( char *pszFileName, uint32_t ulBufferSize );
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream);
 static ERROR_CODE DownloadFeedFile( const char *pszURL );
-static bool FeedFileExists( void );
 static ERROR_CODE InitConfig(void);
+static void DebugConfig( void );
 
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream)
 {
@@ -85,25 +93,6 @@ static ERROR_CODE DownloadFeedFile( const char *pszURL )
     curl_global_cleanup();
     
     return NO_ERROR;
-}
-
-static bool FeedFileExists( void )
-{
-    DIR *psDir = opendir("./");
-    bool bRet = false;
-
-    if( psDir != NULL )
-    {
-       struct dirent *psCurrentFile = NULL;
-
-       while( !bRet && ( psCurrentFile = readdir(psDir) ) != NULL )
-       {
-           bRet = ( strstr( psCurrentFile->d_name, FILENAME_EXT) != NULL);
-       }
-
-    }
-
-    return bRet;
 }
 
 static ERROR_CODE GenerateFileName( char *pszFileName, uint32_t ulBufferSize )
@@ -158,12 +147,21 @@ void print_xml(xmlNode * node, int indent_len)
     }
 }
 
+  static const char* s_apszConfigList[CONFIG_LAST] = 
+  {
+    "currentFilename",
+    "daysToFileUpdate"
+  };
+  
 static ERROR_CODE InitConfig(void)
 {
     xmlDocPtr doc = NULL;       /* document pointer */
     xmlNodePtr root_node = NULL, node = NULL;/* node pointers */
     char buff[256] = {0,};
     int i = 0, j = 0;
+    char szFilename[MAX_FILENAME_LEN+1] = {0,};
+
+    GenerateFileName(szFilename, sizeof(szFilename));
 
     LIBXML_TEST_VERSION;
 
@@ -178,10 +176,10 @@ static ERROR_CODE InitConfig(void)
      * xmlNewChild() creates a new node, which is "attached" as child node
      * of root_node node. 
      */
-    xmlNewChild(root_node, NULL, BAD_CAST "currentFilename",
-                BAD_CAST "26122019.xml");
-    xmlNewChild(root_node,NULL, BAD_CAST "daysToFileUpdate", BAD_CAST "14");
-
+    xmlNewChild(root_node, NULL, BAD_CAST s_apszConfigList[0], BAD_CAST szFilename );
+    strcpy( s_aszConfigs[0], szFilename );
+    xmlNewChild(root_node,NULL, BAD_CAST s_apszConfigList[1], BAD_CAST DAYS_UNTIL_NEXT_UPDATE );
+    strcpy( s_aszConfigs[1], DAYS_UNTIL_NEXT_UPDATE);
     /* 
      * Dumping document to stdio or file
      */
@@ -199,83 +197,29 @@ static ERROR_CODE InitConfig(void)
     return NO_ERROR;
 }
 
-/**
- * processNode:
- * @reader: the xmlReader
- *
- * Dump information about the current node
- */
-static void
-processNode(xmlTextReaderPtr reader) {
-    const xmlChar *name, *value;
-
-    name = xmlTextReaderConstName(reader);
-    if (name == NULL)
-	name = BAD_CAST "--";
-
-    value = xmlTextReaderConstValue(reader);
-
-    printf("%d %d %s %d %d", 
-	    xmlTextReaderDepth(reader),
-	    xmlTextReaderNodeType(reader),
-	    name,
-	    xmlTextReaderIsEmptyElement(reader),
-	    xmlTextReaderHasValue(reader));
-    if (value == NULL)
-	printf("\n");
-    else {
-        if (xmlStrlen(value) > 40)
-            printf(" %.40s...\n", value);
-        else
-	    printf(" %s\n", value);
-    }
-}
-
-/**
- * streamFile:
- * @filename: the file name to parse
- *
- * Parse, validate and print information about an XML file.
- */
-static void
-streamFile(const char *filename) {
-    
-}
-
 ERROR_CODE ReadConfig( void )
 {
   ERROR_CODE eRet = NO_ERROR;
   xmlTextReaderPtr pReader = NULL;
-  int iRet = 0;
+  CONFIG_KEYS x = 0;
 
-  /*
-    * Pass some special parsing options to activate DTD attribute defaulting,
-    * entities substitution and DTD validation
-  */
-  pReader = xmlReaderForFile(CONFIG_FILENAME, NULL,
-                XML_PARSE_RECOVER ); /* validate with the DTD */
-
+  pReader = xmlReaderForFile(CONFIG_FILENAME, NULL, 0 );
   if (pReader != NULL) 
   {
-    iRet = xmlTextReaderRead(pReader);
-    while (iRet == 1) 
+    while (xmlTextReaderRead(pReader) == 1 && x < CONFIG_LAST ) 
     {
-        processNode(pReader);
-        iRet = xmlTextReaderRead(pReader);
+        const xmlChar *pName = xmlTextReaderConstName(pReader);
+
+        if( pName != NULL && ( strcmp( s_apszConfigList[x], pName) == 0 ) )
+        {
+          xmlTextReaderRead(pReader);
+          const xmlChar *pValue = xmlTextReaderConstValue(pReader);
+          strcpy( s_aszConfigs[x], pValue );
+          x++;
+        }        
     }
-  
-  /*
-	 * Once the document has been fully parsed check the validation results
-	 */
-  if (xmlTextReaderIsValid(pReader) != 1) 
-  {
-    eRet = CONFIG_VALIDATION_ERROR;
-	}
-  
-  xmlFreeTextReader(pReader);
-  if (iRet != 0) {
-    eRet = XML_PARSING_ERROR;
-  }
+    
+    xmlFreeTextReader(pReader);
   } 
   else 
   {
@@ -295,14 +239,24 @@ ERROR_CODE ReadConfig( void )
   return eRet; 
 }
 
+static void DebugConfig( void )
+{
+  printf( "%s: Debugging config\n", __func__ );
+  for( CONFIG_KEYS x = 0; x < CONFIG_LAST; x++ )
+  {
+    printf( "s_aszConfigs[%d] = %s\n", x, s_aszConfigs[x] );
+  }
+}
+
 int main() 
 {
-
-    if( ReadConfig() != NO_ERROR )
-    {
-      printf( "Error with reading config file\n");
-      InitConfig();
-    }
+  ERROR_CODE eRet = ReadConfig();
+  if( eRet != NO_ERROR )
+  {
+    printf( "Error %d with reading config file\n", eRet );
+    InitConfig();
+  }
+  DebugConfig();
     
-    return(0);
+  return(0);
 }
