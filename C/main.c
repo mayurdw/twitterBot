@@ -197,20 +197,25 @@ static ERROR_CODE InitConfig(void)
     return NO_ERROR;
 }
 
-ERROR_CODE ReadConfig( void )
+ERROR_CODE ReadXml( const char *pszFilename, const char **ppaszList, uint32_t ulArraySize )
 {
   ERROR_CODE eRet = NO_ERROR;
   xmlTextReaderPtr pReader = NULL;
   CONFIG_KEYS x = 0;
 
-  pReader = xmlReaderForFile(CONFIG_FILENAME, NULL, 0 );
+  if( pszFilename == NULL || ppaszList == NULL || ulArraySize == 0 )
+  {
+    return INVALID_ARG;
+  }
+
+  pReader = xmlReaderForFile(pszFilename, NULL, 0 );
   if (pReader != NULL) 
   {
-    while (xmlTextReaderRead(pReader) == 1 && x < CONFIG_LAST ) 
+    while (xmlTextReaderRead(pReader) == 1 && x < ulArraySize ) 
     {
         const xmlChar *pName = xmlTextReaderConstName(pReader);
 
-        if( pName != NULL && ( strcmp( s_apszConfigList[x], pName) == 0 ) )
+        if( pName != NULL && ( strcmp( ppaszList[x], pName) == 0 ) )
         {
           xmlTextReaderRead(pReader);
           const xmlChar *pValue = xmlTextReaderConstValue(pReader);
@@ -226,17 +231,21 @@ ERROR_CODE ReadConfig( void )
     eRet = FILE_ERROR;
   }
 
+  // /*
+  //  * Cleanup function for the XML library.
+  //  */
+  xmlCleanupParser();
+  // /*
+  //  * this is to debug memory for regression tests
+  //  */
+  xmlMemoryDump();
 
-    // /*
-    //  * Cleanup function for the XML library.
-    //  */
-    xmlCleanupParser();
-    // /*
-    //  * this is to debug memory for regression tests
-    //  */
-    xmlMemoryDump();
+  return eRet;
+}
 
-  return eRet; 
+ERROR_CODE ReadConfig( void )
+{
+  return ReadXml( CONFIG_FILENAME, s_apszConfigList, CONFIG_LAST );
 }
 
 static void DebugConfig( void )
