@@ -4,18 +4,14 @@
 */
 
 #include <errno.h>
-#include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <curl/curl.h>
 #include <string.h>
 #include <dirent.h>
-#include <libxml/parser.h>
-#include <libxml/xmlreader.h>
 #include "config.h"
 
-#define MAX_FILENAME_LEN        16
 #define BLOG_FEED_URL           "https://itsmayurremember.wordpress.com/feed"
 #define FILENAME_KEY            "FEEDFILE"
 #define DAYS_UNTIL_NEXT_UPDATE  "14"
@@ -27,13 +23,12 @@ typedef struct
 } RSS_FILE_STREAM;
 
 static const char* s_pszFileFormat = "%04i%02i%02i.xml";
-static char s_aszConfigs[CONFIG_LAST][MAX_FILENAME_LEN+1] = {0,};
+
 // Static Functions
 static ERROR_CODE GenerateFileName( char *pszFileName, uint32_t ulBufferSize );
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream);
 static ERROR_CODE DownloadFeedFile( const char *pszURL );
 static ERROR_CODE InitConfig(void);
-static void DebugConfig( void );
 
 static size_t writeStreamToFile(void *pvBuffer, size_t iSize, size_t iNMemb, void *pvStream)
 {
@@ -94,18 +89,9 @@ static ERROR_CODE GenerateFileName( char *pszFileName, uint32_t ulBufferSize )
     return NO_ERROR;
 }
 
-static void DebugConfig( void )
-{
-  printf( "%s: Debugging config\n", __func__ );
-  for( CONFIG_KEYS x = 0; x < CONFIG_LAST; x++ )
-  {
-    printf( "s_aszConfigs[%d] = %s\n", x, s_aszConfigs[x] );
-  }
-}
-
 int main() 
 {
-  ERROR_CODE eRet = ReadConfig();
-
+ ReadConfig();
+ 
   return(0);
 }

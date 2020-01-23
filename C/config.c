@@ -1,15 +1,28 @@
 
+#include <stdio.h>
 #include "config.h"
 
-static const char* s_apszConfigList[CONFIG_LAST] = 
-{
-  "currentFilename",
-  "daysToFileUpdate"
-};
+static const UTIL_STR_ARRAY s_sConfigKeys = { "currentFilename", "daysToFileUpdate" };
+static UTIL_STR_ARRAY s_sConfig = {0,};
+
+
+static void DebugConfig( void );
 
 ERROR_CODE ReadConfig( void )
 {
-  return ReadXml( CONFIG_FILENAME, s_apszConfigList, CONFIG_LAST );
+   ERROR_CODE eRet = ReadXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig  );
+
+   DebugConfig();
+   return eRet;
+}
+
+static void DebugConfig( void )
+{
+  printf( "%s: Debugging config\n", __func__ );
+  for( CONFIG_KEYS x = 0; x < CONFIG_LAST; x++ )
+  {
+    printf( "s_sConfig.aszStringArray[%d] = %s\n", x, s_sConfig.aszStringArray[x] );
+  }
 }
 
 #if 0
