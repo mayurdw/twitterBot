@@ -1,1 +1,0 @@
-/usr/bin/cc -fPIC   -shared -Wl,-soname,libXML.so -o libXML.so CMakeFiles/XML.dir/xmlWrapper.c.o 
