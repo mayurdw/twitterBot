@@ -6,11 +6,13 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <unistd.h>
 #include <curl/curl.h>
 #include <string.h>
-#include <dirent.h>
 #include "config.h"
+#ifndef WIN32
+#include <unistd.h>
+#include <dirent.h>
+#endif
 
 #define BLOG_FEED_URL           "https://itsmayurremember.wordpress.com/feed"
 #define FILENAME_KEY            "FEEDFILE"
