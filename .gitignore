@@ -174,3 +174,15 @@ C/Utils/CMakeFiles/xmlWrapper.dir/progress.make
 C/Utils/cmake_install.cmake
 C/Utils/Makefile
 C/Utils/config.xml
+C/Utils/Utils.dir
+C/*.vcxproj
+C/*.filters
+C/*.user
+C/CMakeFiles
+C/*.dir
+C/*.sln
+C/x64
+C/.vs
+C/Utils/CMakeFiles
+C/Utils/*.vcxproj
+C/Utils/*.filters
