@@ -5,6 +5,6 @@
 
 #define CONFIG_FILENAME         "config.xml"
 
-ERROR_CODE ReadConfig(void);
+ERROR_CODE ReadConfig( void );
 
 #endif

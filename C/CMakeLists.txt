@@ -5,8 +5,11 @@ project(TwitterBot VERSION 1.0)
 
 add_subdirectory(Utils)
 include_directories(Utils)
-include_directories(curl_windows/include)
 
 # add the executable
-add_executable(TwitterBot.exe main.c config.c config.h)
-target_link_libraries(TwitterBot.exe ${CMAKE_SOURCE_DIR}/curl_windows/lib/libcurl.a Utils )
+set(CURL_LIBRARY "-lcurl")
+find_package(CURL REQUIRED)
+find_package(LibXml2 REQUIRED)
+add_executable(TwitterBot main.c config.c config.h)
+include_directories(${CURL_INCLUDE_DIR} ${LIBXML2_INCLUDE_DIR})
+target_link_libraries(TwitterBot ${CURL_LIBRARIES} Utils ${LIBXML2_LIBRARIES} )
