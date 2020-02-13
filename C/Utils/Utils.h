@@ -1,4 +1,4 @@
-/* 
+/*
 * Author: Mayur Wadhwani
 * Created: January 2020
 */
@@ -7,15 +7,17 @@
 #define UTILS_H
 
 #include <string.h>
+#include <stdio.h>
+#include <stdint.h>
 
 #define MAX_FILENAME_LEN        16
 
-typedef enum 
+typedef enum
 {
-  CONFIG_CURRENT_FILENAME = 0,
-  CONFIG_DAYS_UNTIL_UPDATE,
+    CONFIG_CURRENT_FILENAME = 0,
+    CONFIG_DAYS_UNTIL_UPDATE,
 
-  CONFIG_LAST
+    CONFIG_LAST
 }CONFIG_KEYS;
 
 typedef enum
@@ -29,7 +31,9 @@ typedef enum
 typedef struct
 {
     /* data */
-    char aszStringArray[CONFIG_LAST][MAX_FILENAME_LEN+1];
+    char aszStringArray[CONFIG_LAST][MAX_FILENAME_LEN + 1];
 } UTIL_STR_ARRAY;
+
+ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize);
 
 #endif
