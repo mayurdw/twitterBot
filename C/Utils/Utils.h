@@ -39,5 +39,4 @@ typedef struct
 #define RETURN_ON_FAIL(x)   { if( ISERROR( x ) ) { printf( "Error eRet = %d", x ); return x; }}
 
 ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize);
-
 #endif

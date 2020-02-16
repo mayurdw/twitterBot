@@ -7,9 +7,6 @@
 #include "Utils.h"
 #include "config.h"
 
-
-#define DAYS_UNTIL_NEXT_UPDATE  "14"
-
 static const UTIL_STR_ARRAY s_sConfigKeys = { "currentFilename", "daysToFileUpdate" };
 static UTIL_STR_ARRAY s_sConfig = { 0, };
 
@@ -31,7 +28,20 @@ ERROR_CODE ReadConfig(void)
 
 bool IsNewFileRequired()
 {
-    return ( ( strlen( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) > 0 ) && ( atoi( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) > 0 ) );
+    return ( ( strlen( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) > 0 ) && ( atoi( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) <= 0 ) );
+}
+
+ERROR_CODE UpdateConfig( CONFIG_KEYS eConfigKey, const char * pszConfigValue )
+{
+    if( eConfigKey >= CONFIG_LAST || pszConfigValue == NULL || strlen( pszConfigValue ) == 0 )
+    {
+        return INVALID_ARG;
+    }
+
+    memset( s_sConfig.aszStringArray[eConfigKey], 0, sizeof( s_sConfig.aszStringArray[eConfigKey] ) );
+    strcpy( s_sConfig.aszStringArray[eConfigKey], pszConfigValue );
+
+    return WriteXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
 }
 
 static void DebugConfig(void)
