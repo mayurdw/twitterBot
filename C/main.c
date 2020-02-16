@@ -31,7 +31,7 @@ static size_t writeStreamToFile(void* pvBuffer, size_t iSize, size_t iNMemb, voi
     RSS_FILE_STREAM* psOutStream = (RSS_FILE_STREAM*)pvStream;
     if (!psOutStream->psStream) {
         /* open file for writing */
-        psOutStream->psStream = fopen(psOutStream->szFileName, "wb");
+        psOutStream->psStream = fopen(psOutStream->szFileName, "w+");
         if (!psOutStream->psStream)
             return -1; /* failure, can't open file to write */
     }
@@ -71,7 +71,17 @@ static ERROR_CODE DownloadFeedFile(const char* pszURL)
 
 int main()
 {
+    // Download feed file
+    // Check against database
+    // Select a new file
     ReadConfig();
+    if( IsNewFileRequired() )
+    {
+        printf( "Downloading new feed file" );
+        DownloadFeedFile( BLOG_FEED_URL );
+    }
+
+
 
     return(0);
 }

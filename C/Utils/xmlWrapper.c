@@ -53,3 +53,52 @@ ERROR_CODE ReadXml(const char* pszFilename, const UTIL_STR_ARRAY* psKeys, UTIL_S
 
     return eRet;
 }
+
+ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKeys, const UTIL_STR_ARRAY * psConfigValues )
+{
+    xmlDocPtr doc = NULL;       /* document pointer */
+    xmlNodePtr root_node = NULL, node = NULL;/* node pointers */
+    char buff[256] = { 0, };
+    int i = 0, j = 0;
+
+    if( pszFilename == NULL || psConfigKeys == NULL || psConfigValues == NULL )
+    {
+        return INVALID_ARG;
+    }
+
+    LIBXML_TEST_VERSION;
+
+    /*
+     * Creates a new document, a node and set it as a root node
+     */
+    doc = xmlNewDoc( BAD_CAST "1.0" );
+    root_node = xmlNewNode( NULL, BAD_CAST "root" );
+    xmlDocSetRootElement( doc, root_node );
+
+    /*
+     * xmlNewChild() creates a new node, which is "attached" as child node
+     * of root_node node.
+     */
+
+    while( i < CONFIG_LAST && strlen( psConfigKeys->aszStringArray[i] ) > 0 && strlen( psConfigValues->aszStringArray[i] ) > 0 )
+    {
+        xmlNewChild( root_node, NULL, BAD_CAST psConfigKeys->aszStringArray[i], BAD_CAST psConfigValues->aszStringArray[i] );
+        i++;
+    }
+
+    /*
+     * Dumping document to stdio or file
+     */
+    xmlSaveFormatFileEnc( pszFilename, doc, "UTF-8", 1 );
+
+    /*free the document */
+    xmlFreeDoc( doc );
+
+    /*
+     *Free the global variables that may
+     *have been allocated by the parser.
+     */
+    xmlCleanupParser();
+
+    return NO_ERROR;
+}

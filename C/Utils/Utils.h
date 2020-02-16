@@ -34,6 +34,10 @@ typedef struct
     char aszStringArray[CONFIG_LAST][MAX_FILENAME_LEN + 1];
 } UTIL_STR_ARRAY;
 
+#define RETURN(x)           (return x);
+#define ISERROR(x)          (x != NO_ERROR)
+#define RETURN_ON_FAIL(x)   { if( ISERROR( x ) ) { printf( "Error eRet = %d", x ); return x; }}
+
 ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize);
 
 #endif

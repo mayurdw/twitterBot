@@ -3,19 +3,35 @@
     Created: Feb 2020
 */
 
+#include <stdlib.h>
+#include "Utils.h"
 #include "config.h"
+
+
+#define DAYS_UNTIL_NEXT_UPDATE  "14"
 
 static const UTIL_STR_ARRAY s_sConfigKeys = { "currentFilename", "daysToFileUpdate" };
 static UTIL_STR_ARRAY s_sConfig = { 0, };
 
-static void DebugConfig(void);
+static void DebugConfig( void );
+static ERROR_CODE InitConfig( void );
 
 ERROR_CODE ReadConfig(void)
 {
-    ERROR_CODE eRet = ReadXml(CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig);
+    ERROR_CODE eRet = ReadXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
 
+    if( eRet != NO_ERROR )
+    {
+        printf( "ReadXml returned = %d, Initialising config", eRet );
+        InitConfig();
+    }
     DebugConfig();
     return eRet;
+}
+
+bool IsNewFileRequired()
+{
+    return ( ( strlen( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) > 0 ) && ( atoi( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) > 0 ) );
 }
 
 static void DebugConfig(void)
@@ -27,48 +43,10 @@ static void DebugConfig(void)
     }
 }
 
-#if 0
 static ERROR_CODE InitConfig(void)
 {
-    xmlDocPtr doc = NULL;       /* document pointer */
-    xmlNodePtr root_node = NULL, node = NULL;/* node pointers */
-    char buff[256] = { 0, };
-    int i = 0, j = 0;
-    char szFilename[MAX_FILENAME_LEN + 1] = { 0, };
+    GenerateFileName( s_sConfig.aszStringArray[0], sizeof( s_sConfig.aszStringArray[0] ) );
+    strcpy( s_sConfig.aszStringArray[1], "0" );
 
-    GenerateFileName(szFilename, sizeof(szFilename));
-
-    LIBXML_TEST_VERSION;
-
-    /*
-     * Creates a new document, a node and set it as a root node
-     */
-    doc = xmlNewDoc(BAD_CAST "1.0");
-    root_node = xmlNewNode(NULL, BAD_CAST "root");
-    xmlDocSetRootElement(doc, root_node);
-
-    /*
-     * xmlNewChild() creates a new node, which is "attached" as child node
-     * of root_node node.
-     */
-    xmlNewChild(root_node, NULL, BAD_CAST s_apszConfigList[0], BAD_CAST szFilename);
-    strcpy(s_aszConfigs[0], szFilename);
-    xmlNewChild(root_node, NULL, BAD_CAST s_apszConfigList[1], BAD_CAST DAYS_UNTIL_NEXT_UPDATE);
-    strcpy(s_aszConfigs[1], DAYS_UNTIL_NEXT_UPDATE);
-    /*
-     * Dumping document to stdio or file
-     */
-    xmlSaveFormatFileEnc(CONFIG_FILENAME, doc, "UTF-8", 1);
-
-    /*free the document */
-    xmlFreeDoc(doc);
-
-    /*
-     *Free the global variables that may
-     *have been allocated by the parser.
-     */
-    xmlCleanupParser();
-
-    return NO_ERROR;
+    return WriteXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
 }
-#endif
