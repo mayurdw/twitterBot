@@ -44,6 +44,19 @@ ERROR_CODE UpdateConfig( CONFIG_KEYS eConfigKey, const char * pszConfigValue )
     return WriteXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
 }
 
+ERROR_CODE GetConfig( CONFIG_KEYS eConfigKey, char * pszConfigValue, uint32_t ulBufferSize )
+{
+    if( eConfigKey >= CONFIG_LAST || pszConfigValue == NULL || ulBufferSize == 0 )
+    {
+        return INVALID_ARG;
+    }
+
+    memset( pszConfigValue, 0, ulBufferSize );
+    strncpy( pszConfigValue, s_sConfig.aszStringArray[eConfigKey], ulBufferSize - 1 );
+
+    return NO_ERROR;
+}
+
 static void DebugConfig(void)
 {
     printf("%s: Debugging config\n", __func__);

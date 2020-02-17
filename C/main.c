@@ -6,6 +6,7 @@
 #include "Utils.h"
 #include "config.h"
 #include "CurlWrapper.h"
+#include "Database.h"
 
 #define BLOG_FEED_URL           "https://itsmayurremember.wordpress.com/feed"
 
@@ -23,5 +24,6 @@ int main()
         UpdateConfig( CONFIG_DAYS_UNTIL_UPDATE, DAYS_UNTIL_NEXT_UPDATE );
     }
 
+    RETURN_ON_FAIL( ReadFeedXmlFile() );
     return(0);
 }
