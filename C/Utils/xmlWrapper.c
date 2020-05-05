@@ -3,15 +3,74 @@
     Created: January 2020
 */
 
+#include <stdbool.h>
 #include <libxml/parser.h>
 #include <libxml/xmlreader.h>
 #include "xmlWrapper.h"
+
+static xmlTextReaderPtr s_pReader = _null_;
+static ERROR_CODE OpenXmlFile( const char* pszFilename );
+static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszDataBuffer, uint32_t ulBufferLen );
+
+static ERROR_CODE OpenXmlFile( const char* pszFilename )
+{
+   RETURN_ON_NULL( pszFilename );
+   UTIL_ASSERT( strlen( pszFilename ) > 0, INVALID_ARG );
+
+   if( s_pReader != _null_ )
+   {
+      // Close file, free memory etc.
+      s_pReader = _null_;
+   }
+
+   s_pReader = xmlReaderForFile( pszFilename, _null_, 0 );
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszDataBuffer, uint32_t ulBufferLen )
+{
+   bool bFound = FALSE;
+   xmlChar* pszValue = _null_;
+
+   RETURN_ON_NULL( pszElementName );
+   RETURN_ON_NULL( pszDataBuffer );
+   UTIL_ASSERT( strlen( pszElementName ) > 0, INVALID_ARG );
+   UTIL_ASSERT( ulBufferLen > 0, INVALID_ARG );
+   RETURN_ON_NULL( s_pReader );
+   memset( pszDataBuffer, 0, ulBufferLen );
+
+   while( !bFound && ( xmlTextReaderRead( s_pReader ) == 1 ) )
+   {
+      const xmlChar *pszName = xmlTextReaderConstName( s_pReader );
+      if( pszName != _null_ )
+      {
+         bFound = ( strcmp( pszName, pszElementName ) == 0 );
+      }
+   }
+
+   if( bFound )
+   {
+      // We have the first tag
+      xmlTextReaderRead( s_pReader );
+      strncpy( pszDataBuffer, xmlTextReaderConstValue( s_pReader ), ulBufferLen - 1 );
+      // this should close the tag
+      xmlTextReaderRead( s_pReader );
+   }
+
+   return NO_ERROR;
+}
+
 
 ERROR_CODE ReadXml(const char* pszFilename, const UTIL_STR_ARRAY* psKeys, UTIL_STR_ARRAY* psStrArray)
 {
     ERROR_CODE eRet = NO_ERROR;
     xmlTextReaderPtr pReader = NULL;
     uint32_t x = 0;
+
+    RETURN_ON_NULL( pszFilename );
+    RETURN_ON_NULL( psKeys );
+    RETURN_ON_NULL( psStrArray );
 
     if (pszFilename == NULL || psKeys == NULL || psStrArray == NULL)
     {
@@ -20,26 +79,13 @@ ERROR_CODE ReadXml(const char* pszFilename, const UTIL_STR_ARRAY* psKeys, UTIL_S
 
     memset(psStrArray, 0, sizeof(UTIL_STR_ARRAY));
 
-    pReader = xmlReaderForFile(pszFilename, NULL, 0);
-    if (pReader != NULL)
-    {
-        while (xmlTextReaderRead(pReader) == 1 && x < CONFIG_LAST)
-        {
-            const xmlChar* pName = xmlTextReaderConstName(pReader);
-            if (pName != NULL && (strcmp(psKeys->aszStringArray[x], pName) == 0))
-            {
-                xmlTextReaderRead(pReader);
-                const xmlChar* pValue = xmlTextReaderConstValue(pReader);
-                strcpy(psStrArray->aszStringArray[x], pValue);
-                x++;
-            }
-        }
+    RETURN_ON_FAIL( OpenXmlFile( pszFilename ) );
 
-        xmlFreeTextReader(pReader);
-    }
-    else
+    while( x < CONFIG_LAST && strlen( psKeys->aszStringArray[x] ) > 0 )
     {
-        eRet = FILE_ERROR;
+       RETURN_ON_FAIL( ExtractDataFromElement( psKeys->aszStringArray[x], psStrArray->aszStringArray[x], sizeof( psStrArray->aszStringArray[x] ) ) );
+       printf( "%s->%s: %s\n", pszFilename, psKeys->aszStringArray[x], psStrArray->aszStringArray[x] );
+       x++;
     }
 
     // /*
