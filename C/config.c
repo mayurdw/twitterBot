@@ -38,8 +38,7 @@ ERROR_CODE UpdateConfig( CONFIG_KEYS eConfigKey, const char * pszConfigValue )
         return INVALID_ARG;
     }
 
-    memset( s_sConfig.aszStringArray[eConfigKey], 0, sizeof( s_sConfig.aszStringArray[eConfigKey] ) );
-    strcpy( s_sConfig.aszStringArray[eConfigKey], pszConfigValue );
+    Strcpy_safe( s_sConfig.aszStringArray[eConfigKey], pszConfigValue, sizeof( s_sConfig.aszStringArray[eConfigKey] ) );
 
     return WriteXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
 }
@@ -51,8 +50,7 @@ ERROR_CODE GetConfig( CONFIG_KEYS eConfigKey, char * pszConfigValue, uint32_t ul
         return INVALID_ARG;
     }
 
-    memset( pszConfigValue, 0, ulBufferSize );
-    strncpy( pszConfigValue, s_sConfig.aszStringArray[eConfigKey], ulBufferSize - 1 );
+    Strcpy_safe( pszConfigValue, s_sConfig.aszStringArray[eConfigKey], ulBufferSize );
 
     return NO_ERROR;
 }
@@ -60,7 +58,7 @@ ERROR_CODE GetConfig( CONFIG_KEYS eConfigKey, char * pszConfigValue, uint32_t ul
 static void DebugConfig(void)
 {
     printf("%s: Debugging config\n", __func__);
-    for (CONFIG_KEYS x = 0; x < CONFIG_LAST; x++)
+    for (CONFIG_KEYS x = CONFIG_CURRENT_FILENAME; x < CONFIG_LAST; x++)
     {
         printf("s_sConfig.aszStringArray[%d] = %s\n", x, s_sConfig.aszStringArray[x]);
     }
@@ -69,7 +67,7 @@ static void DebugConfig(void)
 static ERROR_CODE InitConfig(void)
 {
     GenerateFileName( s_sConfig.aszStringArray[0], sizeof( s_sConfig.aszStringArray[0] ) );
-    strcpy( s_sConfig.aszStringArray[1], "0" );
-
+    Strcpy_safe( s_sConfig.aszStringArray[1], "0", sizeof( s_sConfig.aszStringArray[1] ) );
+    
     return WriteXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
 }

@@ -41,5 +41,8 @@ typedef struct
 #define RETURN_ON_NULL(x)   { if( x == _null_ ) return INVALID_ARG; }
 #define UTIL_ASSERT(x,y)    { if( !x ) return y; }
 
+ERROR_CODE Strcpy_safe( char* pszDest, const char* pszSrc, uint32_t ulBufferSize );
 ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize);
+ERROR_CODE MallocAndCopy( char** pszStringDest, const char* pszStringSrc );
+
 #endif

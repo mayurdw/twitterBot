@@ -11,6 +11,7 @@
 static xmlTextReaderPtr s_pReader = _null_;
 static ERROR_CODE OpenXmlFile( const char* pszFilename );
 static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszDataBuffer, uint32_t ulBufferLen );
+static ERROR_CODE CleanupDumpXmlMemory( void );
 
 static ERROR_CODE OpenXmlFile( const char* pszFilename )
 {
@@ -19,7 +20,7 @@ static ERROR_CODE OpenXmlFile( const char* pszFilename )
 
    if( s_pReader != _null_ )
    {
-      // Close file, free memory etc.
+      CleanupDumpXmlMemory( );
       s_pReader = _null_;
    }
 
@@ -53,7 +54,7 @@ static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszD
    {
       // We have the first tag
       xmlTextReaderRead( s_pReader );
-      strncpy( pszDataBuffer, xmlTextReaderConstValue( s_pReader ), ulBufferLen - 1 );
+      Strcpy_safe( pszDataBuffer, xmlTextReaderConstValue( s_pReader ), ulBufferLen );
       // this should close the tag
       xmlTextReaderRead( s_pReader );
    }
@@ -61,21 +62,28 @@ static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszD
    return NO_ERROR;
 }
 
+ERROR_CODE CleanupDumpXmlMemory( void )
+{
+   // /*
+       //  * Cleanup function for the XML library.
+       //  */
+   xmlCleanupParser( );
+   // /*
+   //  * this is to debug memory for regression tests
+   //  */
+   xmlMemoryDump( );
+}
+
 
 ERROR_CODE ReadXml(const char* pszFilename, const UTIL_STR_ARRAY* psKeys, UTIL_STR_ARRAY* psStrArray)
 {
     ERROR_CODE eRet = NO_ERROR;
-    xmlTextReaderPtr pReader = NULL;
+    xmlTextReaderPtr pReader = _null_;
     uint32_t x = 0;
 
     RETURN_ON_NULL( pszFilename );
     RETURN_ON_NULL( psKeys );
     RETURN_ON_NULL( psStrArray );
-
-    if (pszFilename == NULL || psKeys == NULL || psStrArray == NULL)
-    {
-        return INVALID_ARG;
-    }
 
     memset(psStrArray, 0, sizeof(UTIL_STR_ARRAY));
 
@@ -88,29 +96,20 @@ ERROR_CODE ReadXml(const char* pszFilename, const UTIL_STR_ARRAY* psKeys, UTIL_S
        x++;
     }
 
-    // /*
-    //  * Cleanup function for the XML library.
-    //  */
-    xmlCleanupParser();
-    // /*
-    //  * this is to debug memory for regression tests
-    //  */
-    xmlMemoryDump();
-
+    CleanupDumpXmlMemory( );
     return eRet;
 }
 
 ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKeys, const UTIL_STR_ARRAY * psConfigValues )
 {
-    xmlDocPtr doc = NULL;       /* document pointer */
-    xmlNodePtr root_node = NULL, node = NULL;/* node pointers */
+    xmlDocPtr doc = _null_;       /* document pointer */
+    xmlNodePtr root_node = _null_, node = _null_;/* node pointers */
     char buff[256] = { 0, };
     int i = 0, j = 0;
 
-    if( pszFilename == NULL || psConfigKeys == NULL || psConfigValues == NULL )
-    {
-        return INVALID_ARG;
-    }
+    RETURN_ON_NULL( pszFilename );
+    RETURN_ON_NULL( psConfigKeys );
+    RETURN_ON_NULL( psConfigValues );
 
     LIBXML_TEST_VERSION;
 
@@ -118,7 +117,7 @@ ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKe
      * Creates a new document, a node and set it as a root node
      */
     doc = xmlNewDoc( BAD_CAST "1.0" );
-    root_node = xmlNewNode( NULL, BAD_CAST "root" );
+    root_node = xmlNewNode( _null_, BAD_CAST "root" );
     xmlDocSetRootElement( doc, root_node );
 
     /*
@@ -128,7 +127,7 @@ ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKe
 
     while( i < CONFIG_LAST && strlen( psConfigKeys->aszStringArray[i] ) > 0 && strlen( psConfigValues->aszStringArray[i] ) > 0 )
     {
-        xmlNewChild( root_node, NULL, BAD_CAST psConfigKeys->aszStringArray[i], BAD_CAST psConfigValues->aszStringArray[i] );
+        xmlNewChild( root_node, _null_, BAD_CAST psConfigKeys->aszStringArray[i], BAD_CAST psConfigValues->aszStringArray[i] );
         i++;
     }
 
@@ -136,15 +135,7 @@ ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKe
      * Dumping document to stdio or file
      */
     xmlSaveFormatFileEnc( pszFilename, doc, "UTF-8", 1 );
-
-    /*free the document */
-    xmlFreeDoc( doc );
-
-    /*
-     *Free the global variables that may
-     *have been allocated by the parser.
-     */
-    xmlCleanupParser();
+    CleanupDumpXmlMemory( );
 
     return NO_ERROR;
 }

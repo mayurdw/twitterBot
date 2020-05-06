@@ -30,7 +30,7 @@ static size_t writeStreamToFile( void * pvBuffer, size_t iSize, size_t iNMemb, v
 
 ERROR_CODE DownloadFeedFile( const char * pszURL )
 {
-    CURLM * psCurl = NULL;
+    CURLM * psCurl = _null_;
     CURLcode resCode = CURLE_OK;
     RSS_FILE_STREAM sFileStream = { 0, };
 
