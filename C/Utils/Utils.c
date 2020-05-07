@@ -61,7 +61,7 @@ ERROR_CODE MallocAndCopy( char** pszStringDest, const char* pszStringSrc )
    pszTemp = *pszStringDest;
 
    ulDestBufferSize = strlen( pszStringSrc ) + 1;
-   pszTemp = ( char* )malloc( ulDestBufferSize );
+   pszTemp = ( char* )malloc( ulDestBufferSize * sizeof( char * ) );
 
    return Strcpy_safe( pszTemp, pszStringSrc, ulDestBufferSize );
 }

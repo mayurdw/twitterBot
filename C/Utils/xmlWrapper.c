@@ -8,6 +8,14 @@
 #include <libxml/xmlreader.h>
 #include "xmlWrapper.h"
 
+// TODO: 
+/*
+   1. Allow xmlWrapper ptr to be passed into functions
+   2. Allow singular str ptr to be passed down to be found
+   3. Remove the static ptr from this file
+   4. Read 
+*/
+
 static xmlTextReaderPtr s_pReader = _null_;
 static ERROR_CODE OpenXmlFile( const char* pszFilename );
 static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszDataBuffer, uint32_t ulBufferLen );
@@ -78,7 +86,6 @@ ERROR_CODE CleanupDumpXmlMemory( void )
 ERROR_CODE ReadXml(const char* pszFilename, const UTIL_STR_ARRAY* psKeys, UTIL_STR_ARRAY* psStrArray)
 {
     ERROR_CODE eRet = NO_ERROR;
-    xmlTextReaderPtr pReader = _null_;
     uint32_t x = 0;
 
     RETURN_ON_NULL( pszFilename );
