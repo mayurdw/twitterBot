@@ -19,7 +19,7 @@ int main()
     RETURN_ON_FAIL( ReadConfig() );
     if( IsNewFileRequired() )
     {
-        printf( "Downloading new feed file" );
+        printf( "Downloading new feed file\n" );
         RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
         UpdateConfig( CONFIG_DAYS_UNTIL_UPDATE, DAYS_UNTIL_NEXT_UPDATE );
     }

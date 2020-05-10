@@ -10,48 +10,49 @@
 
 // TODO: 
 /*
-   1. Allow xmlWrapper ptr to be passed into functions
-   2. Allow singular str ptr to be passed down to be found
-   3. Remove the static ptr from this file
-   4. Read 
+   
 */
 
-static xmlTextReaderPtr s_pReader = _null_;
-static ERROR_CODE OpenXmlFile( const char* pszFilename );
-static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszDataBuffer, uint32_t ulBufferLen );
-static ERROR_CODE CleanupDumpXmlMemory( void );
-
-static ERROR_CODE OpenXmlFile( const char* pszFilename )
+ERROR_CODE OpenXmlFile( xmlWrapperPtr *ppsFilePtr, const char* pszFilename )
 {
+   xmlTextReaderPtr pReader = _null_;
+
+   RETURN_ON_NULL( ppsFilePtr );
    RETURN_ON_NULL( pszFilename );
    UTIL_ASSERT( strlen( pszFilename ) > 0, INVALID_ARG );
 
-   if( s_pReader != _null_ )
+   if( *ppsFilePtr != _null_ )
    {
       CleanupDumpXmlMemory( );
-      s_pReader = _null_;
+      *ppsFilePtr = _null_;
    }
 
-   s_pReader = xmlReaderForFile( pszFilename, _null_, 0 );
+   pReader = xmlReaderForFile( pszFilename, _null_, 0 );
+   RETURN_ON_NULL( pReader );
+
+   *ppsFilePtr = ( xmlWrapperPtr * )pReader;
 
    return NO_ERROR;
 }
 
-static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszDataBuffer, uint32_t ulBufferLen )
+ERROR_CODE ExtractDataFromElement( const xmlWrapperPtr psFilePtr, const char* pszElementName, char* pszDataBuffer, uint32_t ulBufferLen )
 {
    bool bFound = FALSE;
    xmlChar* pszValue = _null_;
+   xmlTextReaderPtr psReader = 0;
 
    RETURN_ON_NULL( pszElementName );
    RETURN_ON_NULL( pszDataBuffer );
    UTIL_ASSERT( strlen( pszElementName ) > 0, INVALID_ARG );
    UTIL_ASSERT( ulBufferLen > 0, INVALID_ARG );
-   RETURN_ON_NULL( s_pReader );
-   memset( pszDataBuffer, 0, ulBufferLen );
+   RETURN_ON_NULL( psFilePtr );
 
-   while( !bFound && ( xmlTextReaderRead( s_pReader ) == 1 ) )
+   memset( pszDataBuffer, 0, ulBufferLen );
+   psReader = ( xmlTextReaderPtr )psFilePtr;
+
+   while( !bFound && ( xmlTextReaderRead( psReader ) == 1 ) )
    {
-      const xmlChar *pszName = xmlTextReaderConstName( s_pReader );
+      const xmlChar *pszName = xmlTextReaderConstName( psReader );
       if( pszName != _null_ )
       {
          bFound = ( strcmp( pszName, pszElementName ) == 0 );
@@ -61,10 +62,10 @@ static ERROR_CODE ExtractDataFromElement( const char* pszElementName, char* pszD
    if( bFound )
    {
       // We have the first tag
-      xmlTextReaderRead( s_pReader );
-      Strcpy_safe( pszDataBuffer, xmlTextReaderConstValue( s_pReader ), ulBufferLen );
+      xmlTextReaderRead( psReader );
+      Strcpy_safe( pszDataBuffer, xmlTextReaderConstValue( psReader ), ulBufferLen );
       // this should close the tag
-      xmlTextReaderRead( s_pReader );
+      xmlTextReaderRead( psReader );
    }
 
    return NO_ERROR;
@@ -80,31 +81,7 @@ ERROR_CODE CleanupDumpXmlMemory( void )
    //  * this is to debug memory for regression tests
    //  */
    xmlMemoryDump( );
-}
 
-
-ERROR_CODE ReadXml(const char* pszFilename, const UTIL_STR_ARRAY* psKeys, UTIL_STR_ARRAY* psStrArray)
-{
-    ERROR_CODE eRet = NO_ERROR;
-    uint32_t x = 0;
-
-    RETURN_ON_NULL( pszFilename );
-    RETURN_ON_NULL( psKeys );
-    RETURN_ON_NULL( psStrArray );
-
-    memset(psStrArray, 0, sizeof(UTIL_STR_ARRAY));
-
-    RETURN_ON_FAIL( OpenXmlFile( pszFilename ) );
-
-    while( x < CONFIG_LAST && strlen( psKeys->aszStringArray[x] ) > 0 )
-    {
-       RETURN_ON_FAIL( ExtractDataFromElement( psKeys->aszStringArray[x], psStrArray->aszStringArray[x], sizeof( psStrArray->aszStringArray[x] ) ) );
-       printf( "%s->%s: %s\n", pszFilename, psKeys->aszStringArray[x], psStrArray->aszStringArray[x] );
-       x++;
-    }
-
-    CleanupDumpXmlMemory( );
-    return eRet;
 }
 
 ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKeys, const UTIL_STR_ARRAY * psConfigValues )

@@ -7,9 +7,11 @@
 
 #include "Utils.h"
 
-typedef void xmlWrapper;
+typedef void *xmlWrapperPtr;
 
-ERROR_CODE ReadXml(const char* pszFilename, const UTIL_STR_ARRAY* psKeys, UTIL_STR_ARRAY* psStrArray);
+ERROR_CODE OpenXmlFile( xmlWrapperPtr *ppsFilePtr, const char *pszFilename );
 ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKeys, const UTIL_STR_ARRAY * psConfigValues );
+ERROR_CODE ExtractDataFromElement( const xmlWrapperPtr psFilePtr, const char *pszElementName, char *pszDataBuffer, uint32_t ulBufferLen );
+ERROR_CODE CleanupDumpXmlMemory( void );
 
 #endif

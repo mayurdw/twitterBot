@@ -8,7 +8,7 @@
 
 // Static variables
 static BLOG_POST s_asList[200] = { 0, };
-static xmlWrapper *psTextReader = _null_;
+static xmlWrapperPtr psTextReader = _null_;
 
 // Static functions
 static ERROR_CODE ReadDatabaseFile( void );
@@ -21,10 +21,9 @@ ERROR_CODE ReadFeedXmlFile( void )
     const UTIL_STR_ARRAY sKeys = { "title", "link" };
 
     RETURN_ON_FAIL( GetConfig( CONFIG_CURRENT_FILENAME, szFilename, sizeof( szFilename ) ) );
-    printf( "filename = %s\n", szFilename );
-
-    RETURN_ON_FAIL( ReadXml( szFilename, &sKeys, &sConfigValue ) );
-
+    
+    //RETURN_ON_FAIL( OpenXmlFile( psTextReader, szFilename ) );
+    
     return NO_ERROR;
 }
 

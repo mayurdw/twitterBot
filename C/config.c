@@ -9,26 +9,39 @@
 
 static const UTIL_STR_ARRAY s_sConfigKeys = { "currentFilename", "daysToFileUpdate" };
 static UTIL_STR_ARRAY s_sConfig = { 0, };
+static xmlWrapperPtr psConfigFilePtr = _null_;
 
 static void DebugConfig( void );
 static ERROR_CODE InitConfig( void );
 
 ERROR_CODE ReadConfig(void)
 {
-    ERROR_CODE eRet = ReadXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
+   ERROR_CODE eRet = NO_ERROR;
+   uint32_t x = 0;
 
-    if( eRet != NO_ERROR )
-    {
-        printf( "ReadXml returned = %d, Initialising config", eRet );
-        InitConfig();
-    }
-    DebugConfig();
-    return eRet;
+   eRet = OpenXmlFile( &psConfigFilePtr, CONFIG_FILENAME );
+   if( eRet != NO_ERROR )
+   {
+      printf( "OpenXml returned = %d, Initialising config", eRet );
+      InitConfig();
+   }
+
+   while( !ISERROR( eRet ) && x < CONFIG_LAST )
+   {
+      eRet = ExtractDataFromElement( psConfigFilePtr, s_sConfigKeys.aszStringArray[x], s_sConfig.aszStringArray[x], sizeof( s_sConfig.aszStringArray[x] ) );
+      x++;
+   }
+
+   DebugConfig();
+
+   CleanupDumpXmlMemory( );
+   psConfigFilePtr = _null_;
+   return eRet;
 }
 
 bool IsNewFileRequired()
 {
-    return ( ( strlen( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) > 0 ) && ( atoi( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) <= 0 ) );
+   return ( atoi( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) == 0 );
 }
 
 ERROR_CODE UpdateConfig( CONFIG_KEYS eConfigKey, const char * pszConfigValue )
