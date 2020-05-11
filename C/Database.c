@@ -15,15 +15,32 @@ static ERROR_CODE ReadDatabaseFile( void );
 
 ERROR_CODE ReadFeedXmlFile( void )
 {
-   static XML_ITEMS s_sItemList = { "item", { "title ", "link", "category", "category", "category", "description"} };
+   const char *apszItemList[] = { "title", "link", "category", "category", "category", "description" };
     char szFilename[MAX_FILENAME_LEN + 1] = { 0, };
-    UTIL_STR_ARRAY sConfigValue = { 0, };
-    const UTIL_STR_ARRAY sKeys = { "title", "link" };
+    char szTemp[4096 + 1] = { 0, };
+    ERROR_CODE eRet = NO_ERROR;
+    bool bFound = false;
+    int x = 0, y = 0;
+
 
     RETURN_ON_FAIL( GetConfig( CONFIG_CURRENT_FILENAME, szFilename, sizeof( szFilename ) ) );
-    
-    //RETURN_ON_FAIL( OpenXmlFile( psTextReader, szFilename ) );
-    
+
+    RETURN_ON_FAIL( OpenXmlFile( &psTextReader, szFilename ) );
+
+    while( y < 10 )
+    {
+       RETURN_ON_FAIL( FindElement( psTextReader, "item", &bFound ) );
+       x = 0;
+       while( bFound && x < 6 )
+       {
+          RETURN_ON_FAIL( ExtractDataFromElement( psTextReader, apszItemList[x++], szTemp, sizeof( szTemp ) ) );
+          printf( "Data = %s\n", szTemp );
+       }
+
+       RETURN_ON_FAIL( FindElement( psTextReader, "item", &bFound ) );
+       y++;
+    }
+
     return NO_ERROR;
 }
 

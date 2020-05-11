@@ -17,11 +17,6 @@ typedef struct
    char* pszDescription;
 } BLOG_POST;
 
-typedef struct
-{
-   char* pszItem;
-   BLOG_POST sPost;
-} XML_ITEMS;
 ERROR_CODE ReadFeedXmlFile( void );
 
 #endif

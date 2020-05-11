@@ -26,6 +26,7 @@ typedef enum
     INVALID_ARG,
     FILE_ERROR,
     CONFIG_VALIDATION_ERROR,
+    NOT_FOUND,
 } ERROR_CODE;
 
 typedef struct
@@ -37,8 +38,8 @@ typedef struct
 #define _null_              0
 #define RETURN(x)           (return x);
 #define ISERROR(x)          (x != NO_ERROR)
-#define RETURN_ON_FAIL(x)   { if( ISERROR( x ) ) { printf( "Error eRet = %d", x ); return x; }}
-#define RETURN_ON_NULL(x)   { if( x == _null_ ) return INVALID_ARG; }
+#define RETURN_ON_FAIL(x)   { if( ISERROR( x ) ) { printf( "%d|%s: Error eRet = %d\n", __LINE__, __func__, x ); return x; }}
+#define RETURN_ON_NULL(x)   { if( x == _null_ ) RETURN_ON_FAIL( INVALID_ARG ); }
 #define UTIL_ASSERT(x,y)    { if( !x ) return y; }
 
 ERROR_CODE Strcpy_safe( char* pszDest, const char* pszSrc, uint32_t ulBufferSize );

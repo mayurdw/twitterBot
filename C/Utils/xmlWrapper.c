@@ -3,7 +3,6 @@
     Created: January 2020
 */
 
-#include <stdbool.h>
 #include <libxml/parser.h>
 #include <libxml/xmlreader.h>
 #include "xmlWrapper.h"
@@ -35,9 +34,35 @@ ERROR_CODE OpenXmlFile( xmlWrapperPtr *ppsFilePtr, const char* pszFilename )
    return NO_ERROR;
 }
 
+
+ERROR_CODE FindElement( const xmlWrapperPtr psFilePtr, const char *pszElementName, bool *pbFound )
+{
+   xmlTextReaderPtr psReader = 0;
+   bool bFound = false;
+
+   RETURN_ON_NULL( psFilePtr );
+   RETURN_ON_NULL( pszElementName );
+   RETURN_ON_NULL( pbFound );
+   *pbFound = false;
+   psReader = ( xmlTextReaderPtr )psFilePtr;
+
+   while( !bFound && ( xmlTextReaderRead( psReader ) == 1 ) )
+   {
+      const xmlChar *pszName = xmlTextReaderConstName( psReader );
+      if( pszName != _null_ )
+      {
+         bFound = ( strcmp( pszName, pszElementName ) == 0 );
+      }
+   }
+
+   *pbFound = bFound;
+
+   return bFound ? NO_ERROR : NOT_FOUND;
+}
+
 ERROR_CODE ExtractDataFromElement( const xmlWrapperPtr psFilePtr, const char* pszElementName, char* pszDataBuffer, uint32_t ulBufferLen )
 {
-   bool bFound = FALSE;
+   bool bFound = false;
    xmlChar* pszValue = _null_;
    xmlTextReaderPtr psReader = 0;
 
@@ -49,15 +74,7 @@ ERROR_CODE ExtractDataFromElement( const xmlWrapperPtr psFilePtr, const char* ps
 
    memset( pszDataBuffer, 0, ulBufferLen );
    psReader = ( xmlTextReaderPtr )psFilePtr;
-
-   while( !bFound && ( xmlTextReaderRead( psReader ) == 1 ) )
-   {
-      const xmlChar *pszName = xmlTextReaderConstName( psReader );
-      if( pszName != _null_ )
-      {
-         bFound = ( strcmp( pszName, pszElementName ) == 0 );
-      }
-   }
+   RETURN_ON_FAIL( FindElement( psFilePtr, pszElementName, &bFound ) );
 
    if( bFound )
    {
@@ -123,3 +140,4 @@ ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKe
 
     return NO_ERROR;
 }
+
