@@ -44,6 +44,5 @@ typedef struct
 
 ERROR_CODE Strcpy_safe( char* pszDest, const char* pszSrc, uint32_t ulBufferSize );
 ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize);
-ERROR_CODE MallocAndCopy( char** pszStringDest, const char* pszStringSrc );
 
 #endif

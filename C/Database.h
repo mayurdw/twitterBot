@@ -11,10 +11,10 @@
 
 typedef struct
 {
-   char* pszTitle;
-   char* pszLink;
-   char* pszCategory[3];
-   char* pszDescription;
+   char szTitle[128+1];
+   char szLink[128+1];
+   char aszCategory[3][32+1];
+   char szDescription[1024+1];
 } BLOG_POST;
 
 ERROR_CODE ReadFeedXmlFile( void );

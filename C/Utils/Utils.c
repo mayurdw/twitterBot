@@ -49,19 +49,3 @@ ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize)
     return NO_ERROR;
 }
 
-ERROR_CODE MallocAndCopy( char** pszStringDest, const char* pszStringSrc )
-{
-   uint32_t ulDestBufferSize = 0;
-   char* pszTemp = _null_;
-
-   RETURN_ON_NULL( pszStringDest );
-   RETURN_ON_NULL( pszStringSrc );
-   UTIL_ASSERT( strlen( pszStringSrc ) > 0, INVALID_ARG );
-   *pszStringDest = _null_;
-   pszTemp = *pszStringDest;
-
-   ulDestBufferSize = strlen( pszStringSrc ) + 1;
-   pszTemp = ( char* )malloc( ulDestBufferSize * sizeof( char * ) );
-
-   return Strcpy_safe( pszTemp, pszStringSrc, ulDestBufferSize );
-}
