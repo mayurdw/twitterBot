@@ -12,18 +12,29 @@
 
 // Static Functions
 
+// Application flow:
+// Check config files
+// If config is absent, it will populate with default config
+// It will check config to see if new RSS file needs to download, it will prompt curl to do so
+// If new RSS file needs to be downloaded, it will ask the database to do it. 
+// Check database
+// Database will check if database file exists
+// If database file exists, then great
+// If not, it will create a database file with the existing RSS file
+// It will give us a post
+
+
 int main()
 {
-    // Check against database
-    // Select a new file
-    RETURN_ON_FAIL( ReadConfig() );
-    if( IsNewFileRequired() )
-    {
-        printf( "Downloading new feed file\n" );
-        RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
-        UpdateConfig( CONFIG_DAYS_UNTIL_UPDATE, DAYS_UNTIL_NEXT_UPDATE );
-    }
+   // Config init
+   RETURN_ON_FAIL( ReadConfig() );
+   if( IsNewFileRequired() )
+   {
+      printf( "Downloading new feed file\n" );
+      RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
+   }
 
-    RETURN_ON_FAIL( ReadFeedXmlFile() );
-    return(0);
+   RETURN_ON_FAIL( ReadFeedXmlFile() );
+
+   return(0);
 }

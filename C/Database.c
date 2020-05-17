@@ -38,7 +38,7 @@ ERROR_CODE ReadFeedXmlFile( void )
    int y = 0;
    BLOG_POST asPost[150] = { 0, };
 
-   RETURN_ON_FAIL( GetConfig( CONFIG_CURRENT_FILENAME, szFilename, sizeof( szFilename ) ) );
+   RETURN_ON_FAIL( Config_GetRssFilename( szFilename, sizeof( szFilename ) ) );
 
    RETURN_ON_FAIL( OpenXmlFile( &psTextReader, szFilename ) );
 

@@ -7,11 +7,6 @@
 #include <libxml/xmlreader.h>
 #include "xmlWrapper.h"
 
-// TODO: 
-/*
-   
-*/
-
 ERROR_CODE OpenXmlFile( xmlWrapperPtr *ppsFilePtr, const char* pszFilename )
 {
    xmlTextReaderPtr pReader = _null_;
@@ -101,43 +96,58 @@ ERROR_CODE CleanupDumpXmlMemory( void )
 
 }
 
-ERROR_CODE WriteXml( const char * pszFilename, const UTIL_STR_ARRAY * psConfigKeys, const UTIL_STR_ARRAY * psConfigValues )
+ERROR_CODE CreateDocPtr( xmlWriterPtrs *psXmlFile )
 {
-    xmlDocPtr doc = _null_;       /* document pointer */
-    xmlNodePtr root_node = _null_, node = _null_;/* node pointers */
-    char buff[256] = { 0, };
-    int i = 0, j = 0;
+   xmlDocPtr psDoc = _null_;       /* Document pointer */
+   xmlNodePtr root_node = _null_;  /* node pointers */
+ 
+   RETURN_ON_NULL( psXmlFile );
+   memset( psXmlFile, 0, sizeof( xmlWriterPtrs ) );
 
-    RETURN_ON_NULL( pszFilename );
-    RETURN_ON_NULL( psConfigKeys );
-    RETURN_ON_NULL( psConfigValues );
+   LIBXML_TEST_VERSION;
 
-    LIBXML_TEST_VERSION;
+   /*
+    * Creates a new Document, a node and set it as a root node
+    */
+   psDoc = xmlNewDoc( BAD_CAST "1.0" );
+   root_node = xmlNewNode( _null_, BAD_CAST "root" );
+   xmlDocSetRootElement( psDoc, root_node );
 
-    /*
-     * Creates a new document, a node and set it as a root node
-     */
-    doc = xmlNewDoc( BAD_CAST "1.0" );
-    root_node = xmlNewNode( _null_, BAD_CAST "root" );
-    xmlDocSetRootElement( doc, root_node );
+   *psXmlFile->ppsDocPtr = ( xmlDocWriterPtr* )psDoc;
+   *psXmlFile->ppsRootNodePtr = ( xmlRootNodePtr* )root_node;
 
-    /*
-     * xmlNewChild() creates a new node, which is "attached" as child node
-     * of root_node node.
-     */
-
-    while( i < CONFIG_LAST && strlen( psConfigKeys->aszStringArray[i] ) > 0 && strlen( psConfigValues->aszStringArray[i] ) > 0 )
-    {
-        xmlNewChild( root_node, _null_, BAD_CAST psConfigKeys->aszStringArray[i], BAD_CAST psConfigValues->aszStringArray[i] );
-        i++;
-    }
-
-    /*
-     * Dumping document to stdio or file
-     */
-    xmlSaveFormatFileEnc( pszFilename, doc, "UTF-8", 1 );
-    CleanupDumpXmlMemory( );
-
-    return NO_ERROR;
+   return NO_ERROR;
 }
 
+ERROR_CODE CreateXmlNode( const xmlWriterPtrs *psXmlFile, const char *pszElement, const char *pszData )
+{
+   xmlNodePtr root_node = _null_;
+
+   RETURN_ON_NULL( psXmlFile );
+   RETURN_ON_NULL( psXmlFile->ppsDocPtr );
+   RETURN_ON_NULL( psXmlFile->ppsRootNodePtr );
+   RETURN_ON_NULL( pszElement );
+   RETURN_ON_NULL( pszData );
+
+   root_node = ( xmlNodePtr )psXmlFile->ppsRootNodePtr;
+
+   xmlNewChild( root_node, _null_, BAD_CAST pszElement, BAD_CAST pszData );
+
+   return NO_ERROR;
+}
+
+ERROR_CODE WriteXmlFile( const xmlWriterPtrs *psXmlFile, const char *pszFilename )
+{
+   xmlDocPtr psDoc = _null_;
+
+   RETURN_ON_NULL( psXmlFile );
+   RETURN_ON_NULL( psXmlFile->ppsDocPtr );
+   RETURN_ON_NULL( pszFilename );
+
+   psDoc = ( xmlDocPtr )psXmlFile->ppsDocPtr;
+
+   xmlSaveFormatFileEnc( pszFilename, psDoc, "UTF-8", 1 );
+   CleanupDumpXmlMemory();
+
+   return NO_ERROR;
+}

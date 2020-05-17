@@ -10,11 +10,21 @@
 #include "Utils.h"
 #include "xmlWrapper.h"
 
-#define CONFIG_FILENAME         "config.xml"
+typedef struct
+{
+   char szRssFilename[MAX_FILENAME_LEN + 1];
+   char szDaysUntilUpdate[2 + 1];
+} BOT_CONFIG;
+
 #define DAYS_UNTIL_NEXT_UPDATE  "14"
 
 ERROR_CODE ReadConfig( void );
 bool IsNewFileRequired( void );
-ERROR_CODE UpdateConfig( CONFIG_KEYS eConfigKey, const char * pszConfigValue );
-ERROR_CODE GetConfig( CONFIG_KEYS eConfigKey, char * pszConfigValue, uint32_t ulBufferSize );
+
+// Getters & setters
+ERROR_CODE Config_GetRssFilename( char *pszFilename, uint32_t ulBufferSize );
+ERROR_CODE Config_GetDaysUntilUpdate( char *pszDaysUntilUpdate, uint32_t ulBufferSize );
+ERROR_CODE Config_SetRssFilename( const char *pszFilename );
+ERROR_CODE Config_SetDaysUntilUpdate( const char *pszDaysUntilUpdate );
+
 #endif

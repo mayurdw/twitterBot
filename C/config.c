@@ -7,9 +7,12 @@
 #include "Utils.h"
 #include "config.h"
 
-static const UTIL_STR_ARRAY s_sConfigKeys = { "currentFilename", "daysToFileUpdate" };
-static UTIL_STR_ARRAY s_sConfig = { 0, };
-static xmlWrapperPtr psConfigFilePtr = _null_;
+// Preprocessors defines
+#define CONFIG_FILENAME         "config.xml"
+
+// Statics
+static BOT_CONFIG s_sBotConfig = { 0, };
+static const char *s_apszConfigKeys[] = { "currentFilename", "daysToFileUpdate" };
 
 static void DebugConfig( void );
 static ERROR_CODE InitConfig( void );
@@ -18,69 +21,89 @@ ERROR_CODE ReadConfig(void)
 {
    ERROR_CODE eRet = NO_ERROR;
    uint32_t x = 0;
+   xmlWrapperPtr psConfigFilePtr = _null_;
 
    eRet = OpenXmlFile( &psConfigFilePtr, CONFIG_FILENAME );
-   if( eRet != NO_ERROR )
+   if( ISERROR( eRet ) )
    {
       printf( "OpenXml returned = %d, Initialising config", eRet );
       InitConfig();
    }
-
-   while( !ISERROR( eRet ) && x < CONFIG_LAST )
+   else
    {
-      eRet = ExtractDataFromElement( psConfigFilePtr, s_sConfigKeys.aszStringArray[x], s_sConfig.aszStringArray[x], sizeof( s_sConfig.aszStringArray[x] ) );
-      x++;
+      RETURN_ON_FAIL( ExtractDataFromElement( psConfigFilePtr, s_apszConfigKeys[x++], s_sBotConfig.szRssFilename, sizeof( s_sBotConfig.szRssFilename ) ) );
+      RETURN_ON_FAIL( ExtractDataFromElement( psConfigFilePtr, s_apszConfigKeys[x++], s_sBotConfig.szDaysUntilUpdate, sizeof( s_sBotConfig.szDaysUntilUpdate ) ) );
    }
 
    DebugConfig();
 
    CleanupDumpXmlMemory( );
    psConfigFilePtr = _null_;
+
    return eRet;
 }
 
 bool IsNewFileRequired()
 {
-   return ( atoi( s_sConfig.aszStringArray[CONFIG_DAYS_UNTIL_UPDATE] ) == 0 );
+   return ( atoi( s_sBotConfig.szDaysUntilUpdate ) == 0 );
 }
 
-ERROR_CODE UpdateConfig( CONFIG_KEYS eConfigKey, const char * pszConfigValue )
+ERROR_CODE Config_GetRssFilename( char *pszFilename, uint32_t ulBufferSize )
 {
-    if( eConfigKey >= CONFIG_LAST || pszConfigValue == NULL || strlen( pszConfigValue ) == 0 )
-    {
-        return INVALID_ARG;
-    }
+   RETURN_ON_NULL( pszFilename );
+   UTIL_ASSERT( ulBufferSize != 0, INVALID_ARG );
 
-    Strcpy_safe( s_sConfig.aszStringArray[eConfigKey], pszConfigValue, sizeof( s_sConfig.aszStringArray[eConfigKey] ) );
-
-    return WriteXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
+   return Strcpy_safe( pszFilename, s_sBotConfig.szRssFilename, ulBufferSize );
 }
 
-ERROR_CODE GetConfig( CONFIG_KEYS eConfigKey, char * pszConfigValue, uint32_t ulBufferSize )
+ERROR_CODE Config_GetDaysUntilUpdate( char *pszDaysUntilUpdate, uint32_t ulBufferSize )
 {
-    if( eConfigKey >= CONFIG_LAST || pszConfigValue == NULL || ulBufferSize == 0 )
-    {
-        return INVALID_ARG;
-    }
+   RETURN_ON_NULL( pszDaysUntilUpdate );
+   UTIL_ASSERT( ulBufferSize != 0, INVALID_ARG );
 
-    Strcpy_safe( pszConfigValue, s_sConfig.aszStringArray[eConfigKey], ulBufferSize );
+   return Strcpy_safe( pszDaysUntilUpdate, s_sBotConfig.szDaysUntilUpdate, ulBufferSize );
+}
 
-    return NO_ERROR;
+ERROR_CODE Config_SetRssFilename( const char *pszFilename )
+{
+   RETURN_ON_NULL( pszFilename );
+
+   return Strcpy_safe( s_sBotConfig.szRssFilename, pszFilename, sizeof( s_sBotConfig.szRssFilename ) );
+}
+
+ERROR_CODE Config_SetDaysUntilUpdate( const char *pszDaysUntilUpdate )
+{
+   RETURN_ON_NULL( pszDaysUntilUpdate );
+
+   return Strcpy_safe( s_sBotConfig.szDaysUntilUpdate, pszDaysUntilUpdate, sizeof( s_sBotConfig.szDaysUntilUpdate ) );
 }
 
 static void DebugConfig(void)
 {
-    printf("%s: Debugging config\n", __func__);
-    for (CONFIG_KEYS x = CONFIG_CURRENT_FILENAME; x < CONFIG_LAST; x++)
-    {
-        printf("s_sConfig.aszStringArray[%d] = %s\n", x, s_sConfig.aszStringArray[x]);
-    }
+#if DBG_CONFIG
+   printf( "------------------------------" );
+   printf( "Debugging config.xml\n", __func__ );
+   printf( "Current filename = %s\n", s_sBotConfig.szRssFilename );
+   printf( "Days Until Next Update = %s\n", s_sBotConfig.szDaysUntilUpdate );
+   printf( "------------------------------" );
+#endif
 }
 
 static ERROR_CODE InitConfig(void)
 {
-    GenerateFileName( s_sConfig.aszStringArray[0], sizeof( s_sConfig.aszStringArray[0] ) );
-    Strcpy_safe( s_sConfig.aszStringArray[1], "0", sizeof( s_sConfig.aszStringArray[1] ) );
-    
-    return WriteXml( CONFIG_FILENAME, &s_sConfigKeys, &s_sConfig );
+   BOT_CONFIG sBotConfig = { 0, };
+   xmlWriterPtrs sWriter = { 0, };
+
+   GenerateFileName( sBotConfig.szRssFilename, sizeof( sBotConfig.szRssFilename ) );
+   Config_SetDaysUntilUpdate( "0" );
+
+   RETURN_ON_FAIL( CreateDocPtr( &sWriter ) );
+   RETURN_ON_FAIL( CreateXmlNode( &sWriter, s_apszConfigKeys[0], sBotConfig.szRssFilename ) );
+   RETURN_ON_FAIL( CreateXmlNode( &sWriter, s_apszConfigKeys[1], sBotConfig.szDaysUntilUpdate ) );
+   RETURN_ON_FAIL( WriteXmlFile( &sWriter, CONFIG_FILENAME ) );
+
+   memset( &s_sBotConfig, 0, sizeof( BOT_CONFIG ) );
+   s_sBotConfig = sBotConfig;
+
+   return NO_ERROR;
 }
