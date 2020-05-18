@@ -9,6 +9,7 @@
 #include "Database.h"
 
 #define BLOG_FEED_URL           "https://itsmayurremember.wordpress.com/feed"
+#define DAYS_UNTIL_NEXT_UPDATE  "14"
 
 // Static Functions
 
@@ -32,6 +33,7 @@ int main()
    {
       printf( "Downloading new feed file\n" );
       RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
+      RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
    }
 
    RETURN_ON_FAIL( ReadFeedXmlFile() );

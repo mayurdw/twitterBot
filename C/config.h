@@ -16,8 +16,6 @@ typedef struct
    char szDaysUntilUpdate[2 + 1];
 } BOT_CONFIG;
 
-#define DAYS_UNTIL_NEXT_UPDATE  "14"
-
 ERROR_CODE ReadConfig( void );
 bool IsNewFileRequired( void );
 

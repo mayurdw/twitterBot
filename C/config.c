@@ -16,6 +16,7 @@ static const char *s_apszConfigKeys[] = { "currentFilename", "daysToFileUpdate" 
 
 static void DebugConfig( void );
 static ERROR_CODE InitConfig( void );
+static ERROR_CODE WriteConfig( const BOT_CONFIG *psBotConfig );
 
 ERROR_CODE ReadConfig(void)
 {
@@ -26,7 +27,7 @@ ERROR_CODE ReadConfig(void)
    eRet = OpenXmlFile( &psConfigFilePtr, CONFIG_FILENAME );
    if( ISERROR( eRet ) )
    {
-      printf( "OpenXml returned = %d, Initialising config", eRet );
+      printf( "OpenXml returned = %d, Initialising config\n", eRet );
       InitConfig();
    }
    else
@@ -40,7 +41,7 @@ ERROR_CODE ReadConfig(void)
    CleanupDumpXmlMemory( );
    psConfigFilePtr = _null_;
 
-   return eRet;
+   return NO_ERROR;
 }
 
 bool IsNewFileRequired()
@@ -68,14 +69,18 @@ ERROR_CODE Config_SetRssFilename( const char *pszFilename )
 {
    RETURN_ON_NULL( pszFilename );
 
-   return Strcpy_safe( s_sBotConfig.szRssFilename, pszFilename, sizeof( s_sBotConfig.szRssFilename ) );
+   RETURN_ON_FAIL( Strcpy_safe( s_sBotConfig.szRssFilename, pszFilename, sizeof( s_sBotConfig.szRssFilename ) ) );
+
+   return WriteConfig( &s_sBotConfig );
 }
 
 ERROR_CODE Config_SetDaysUntilUpdate( const char *pszDaysUntilUpdate )
 {
    RETURN_ON_NULL( pszDaysUntilUpdate );
 
-   return Strcpy_safe( s_sBotConfig.szDaysUntilUpdate, pszDaysUntilUpdate, sizeof( s_sBotConfig.szDaysUntilUpdate ) );
+   RETURN_ON_FAIL( Strcpy_safe( s_sBotConfig.szDaysUntilUpdate, pszDaysUntilUpdate, sizeof( s_sBotConfig.szDaysUntilUpdate ) ) );
+
+   return WriteConfig( &s_sBotConfig );
 }
 
 static void DebugConfig(void)
@@ -92,18 +97,28 @@ static void DebugConfig(void)
 static ERROR_CODE InitConfig(void)
 {
    BOT_CONFIG sBotConfig = { 0, };
-   xmlWriterPtrs sWriter = { 0, };
-
+   
    GenerateFileName( sBotConfig.szRssFilename, sizeof( sBotConfig.szRssFilename ) );
-   Config_SetDaysUntilUpdate( "0" );
+   Strcpy_safe( sBotConfig.szDaysUntilUpdate, "0", sizeof( sBotConfig.szDaysUntilUpdate ) );
 
-   RETURN_ON_FAIL( CreateDocPtr( &sWriter ) );
-   RETURN_ON_FAIL( CreateXmlNode( &sWriter, s_apszConfigKeys[0], sBotConfig.szRssFilename ) );
-   RETURN_ON_FAIL( CreateXmlNode( &sWriter, s_apszConfigKeys[1], sBotConfig.szDaysUntilUpdate ) );
-   RETURN_ON_FAIL( WriteXmlFile( &sWriter, CONFIG_FILENAME ) );
+   RETURN_ON_FAIL( WriteConfig( &sBotConfig ) );
 
    memset( &s_sBotConfig, 0, sizeof( BOT_CONFIG ) );
    s_sBotConfig = sBotConfig;
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE WriteConfig( const BOT_CONFIG *psBotConfig )
+{
+   xmlWriterPtrs sWriter = { 0, };
+
+   RETURN_ON_NULL( psBotConfig );
+
+   RETURN_ON_FAIL( CreateDocPtr( &sWriter ) );
+   RETURN_ON_FAIL( CreateXmlNode( &sWriter, s_apszConfigKeys[0], psBotConfig->szRssFilename ) );
+   RETURN_ON_FAIL( CreateXmlNode( &sWriter, s_apszConfigKeys[1], psBotConfig->szDaysUntilUpdate ) );
+   RETURN_ON_FAIL( WriteXmlFile( &sWriter, CONFIG_FILENAME ) );
 
    return NO_ERROR;
 }

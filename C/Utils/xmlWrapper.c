@@ -102,7 +102,6 @@ ERROR_CODE CreateDocPtr( xmlWriterPtrs *psXmlFile )
    xmlNodePtr root_node = _null_;  /* node pointers */
  
    RETURN_ON_NULL( psXmlFile );
-   memset( psXmlFile, 0, sizeof( xmlWriterPtrs ) );
 
    LIBXML_TEST_VERSION;
 
@@ -113,8 +112,8 @@ ERROR_CODE CreateDocPtr( xmlWriterPtrs *psXmlFile )
    root_node = xmlNewNode( _null_, BAD_CAST "root" );
    xmlDocSetRootElement( psDoc, root_node );
 
-   *psXmlFile->ppsDocPtr = ( xmlDocWriterPtr* )psDoc;
-   *psXmlFile->ppsRootNodePtr = ( xmlRootNodePtr* )root_node;
+   psXmlFile->ppsDocPtr = ( xmlDocWriterPtr* )psDoc;
+   psXmlFile->ppsRootNodePtr = ( xmlRootNodePtr* )root_node;
 
    return NO_ERROR;
 }

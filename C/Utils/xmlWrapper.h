@@ -15,8 +15,8 @@ typedef void *xmlRootNodePtr;
 
 typedef struct
 {
-   xmlDocWriterPtr *ppsDocPtr;
-   xmlRootNodePtr *ppsRootNodePtr;
+   xmlDocWriterPtr ppsDocPtr;
+   xmlRootNodePtr ppsRootNodePtr;
 } xmlWriterPtrs;
 
 

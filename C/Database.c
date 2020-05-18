@@ -11,7 +11,7 @@ static BLOG_POST s_asList[200] = { 0, };
 static xmlWrapperPtr psTextReader = _null_;
 
 // Static functions
-static ERROR_CODE ReadDatabaseFile( void );
+static ERROR_CODE CreateDatabaseFile( void );
 static ERROR_CODE ExtractAndPopulate( const char *pszElementName, char *pszBufferToPopulate, uint32_t ulBufferSize );
 
 static ERROR_CODE ExtractAndPopulate( const char *pszElementName, char *pszBufferToPopulate, uint32_t ulBufferSize )
@@ -36,7 +36,8 @@ ERROR_CODE ReadFeedXmlFile( void )
    ERROR_CODE eRet = NO_ERROR;
    bool bFound = false;
    int y = 0;
-   BLOG_POST asPost[150] = { 0, };
+ 
+   memset( &s_asList, 0, sizeof( s_asList ) );
 
    RETURN_ON_FAIL( Config_GetRssFilename( szFilename, sizeof( szFilename ) ) );
 
@@ -49,12 +50,12 @@ ERROR_CODE ReadFeedXmlFile( void )
          break;
       if( bFound )
       {
-         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[0], asPost[y].szTitle, sizeof( asPost[y].szTitle ) ) );
-         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[1], asPost[y].szLink, sizeof( asPost[y].szLink ) ) );
-         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[2], asPost[y].aszCategory[0], sizeof( asPost[y].aszCategory[0] ) ) );
-         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[3], asPost[y].aszCategory[1], sizeof( asPost[y].aszCategory[1] ) ) );
-         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[4], asPost[y].aszCategory[2], sizeof( asPost[y].aszCategory[2] ) ) );
-         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[5], asPost[y].szDescription, sizeof( asPost[y].szDescription ) ) );
+         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[0], s_asList[y].szTitle, sizeof( s_asList[y].szTitle ) ) );
+         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[1], s_asList[y].szLink, sizeof( s_asList[y].szLink ) ) );
+         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[2], s_asList[y].aszCategory[0], sizeof( s_asList[y].aszCategory[0] ) ) );
+         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[3], s_asList[y].aszCategory[1], sizeof( s_asList[y].aszCategory[1] ) ) );
+         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[4], s_asList[y].aszCategory[2], sizeof( s_asList[y].aszCategory[2] ) ) );
+         RETURN_ON_FAIL( ExtractAndPopulate( apszItemList[5], s_asList[y].szDescription, sizeof( s_asList[y].szDescription ) ) );
 
       }
 
@@ -67,7 +68,22 @@ ERROR_CODE ReadFeedXmlFile( void )
    return NO_ERROR;
 }
 
-ERROR_CODE ReadDatabaseFile( void )
+ERROR_CODE CreateDatabaseFile( void )
 {
+#if 0
+   const char *pszTestFilename = "testfile.txt";
+   FILE *pFile = _null_;
+   int x = 0;
+
+   pFile = fopen( pszTestFilename, "w" );
+
+   while( ( x < 200 ) && ( strlen( s_asList[x].szTitle ) > 0 ) )
+   {
+      fprintf( pFile, "%s|%s|%s|%s|%s|%s\n", s_asList[x].szTitle, s_asList[x].szLink, s_asList[x].aszCategory[0], s_asList[x].aszCategory[1], s_asList[x].aszCategory[2], s_asList[x].szDescription );
+      x++;
+   }
+
+   fclose( pFile );
+#endif
    return NO_ERROR;
 }
