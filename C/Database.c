@@ -6,13 +6,19 @@
 #include "Database.h"
 #include "config.h"
 
+// Macros
+#define DATABASE_FORMAT "%s,%s,%s,%s,%s,%s,%i\n"
+#define DATABASE_FILE   "database"
+#define MAX_BLOG_POSTS      200
+
 // Static variables
-static BLOG_POST s_asList[200] = { 0, };
+static BLOG_POST s_asList[MAX_BLOG_POSTS] = { 0, };
 static xmlWrapperPtr psTextReader = _null_;
 
 // Static functions
 static ERROR_CODE CreateDatabaseFile( void );
 static ERROR_CODE ExtractAndPopulate( const char *pszElementName, char *pszBufferToPopulate, uint32_t ulBufferSize );
+static ERROR_CODE ReadDatabaseFile( void );
 
 static ERROR_CODE ExtractAndPopulate( const char *pszElementName, char *pszBufferToPopulate, uint32_t ulBufferSize )
 {
@@ -43,7 +49,7 @@ ERROR_CODE ReadFeedXmlFile( void )
 
    RETURN_ON_FAIL( OpenXmlFile( &psTextReader, szFilename ) );
 
-   while( y < 150 )
+   while( y < MAX_BLOG_POSTS )
    {
       eRet = FindElement( psTextReader, "item", &bFound );
       if( ISERROR( eRet ) )
@@ -68,22 +74,66 @@ ERROR_CODE ReadFeedXmlFile( void )
    return NO_ERROR;
 }
 
+ERROR_CODE Database_Init( void )
+{
+   ReadDatabaseFile();
+
+   return NO_ERROR;
+}
+
 ERROR_CODE CreateDatabaseFile( void )
 {
-#if 0
-   const char *pszTestFilename = "testfile.txt";
    FILE *pFile = _null_;
    int x = 0;
 
-   pFile = fopen( pszTestFilename, "w" );
+   pFile = fopen( DATABASE_FILE, "wb" );
 
-   while( ( x < 200 ) && ( strlen( s_asList[x].szTitle ) > 0 ) )
+   while( ( x < MAX_BLOG_POSTS ) && ( strlen( s_asList[x].szTitle ) > 0 ) )
    {
-      fprintf( pFile, "%s|%s|%s|%s|%s|%s\n", s_asList[x].szTitle, s_asList[x].szLink, s_asList[x].aszCategory[0], s_asList[x].aszCategory[1], s_asList[x].aszCategory[2], s_asList[x].szDescription );
+      fprintf( pFile, DATABASE_FORMAT, s_asList[x].szTitle, s_asList[x].szLink, s_asList[x].aszCategory[0], s_asList[x].aszCategory[1], s_asList[x].aszCategory[2], s_asList[x].szDescription, s_asList[x].iNumOfTimesShared );
       x++;
    }
 
    fclose( pFile );
-#endif
+
+   return NO_ERROR;
+}
+
+ERROR_CODE ReadDatabaseFile( void )
+{
+   ERROR_CODE eRet = NO_ERROR;
+   FILE *pFile = _null_;
+
+   memset( s_asList, 0, sizeof( s_asList ) );
+
+   pFile = fopen( DATABASE_FILE, "rb" );
+   if( pFile == _null_ )
+   {
+      eRet = FILE_ERROR;
+   }
+   else
+   {
+      uint32_t x = 0;
+      int iRet = 0, y = 0;
+      char szTemp[sizeof( BLOG_POST ) + 1] = { 0, };
+
+      while( x < MAX_BLOG_POSTS )
+      {
+         iRet = fgets( szTemp, sizeof( szTemp ), pFile );
+         if( iRet < 0 )
+         {
+            eRet = FILE_ERROR;
+            break;
+         }
+
+         // TODO: Extract each arg
+
+         printf( DATABASE_FORMAT, s_asList[x].szTitle, s_asList[x].szLink, s_asList[x].aszCategory[0], s_asList[x].aszCategory[1], s_asList[x].aszCategory[2], s_asList[x].szDescription, s_asList[x].iNumOfTimesShared );
+         x++;
+      }
+
+      fclose( pFile );
+   }
+
    return NO_ERROR;
 }

@@ -37,6 +37,6 @@ int main()
    }
 
    RETURN_ON_FAIL( ReadFeedXmlFile() );
-
+   RETURN_ON_FAIL( Database_Init() );
    return(0);
 }
