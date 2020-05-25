@@ -9,7 +9,8 @@
 // Macros
 #define DATABASE_FORMAT "%s,%s,%s,%s,%s,%s,%i\n"
 #define DATABASE_FILE   "database"
-#define MAX_BLOG_POSTS      200
+#define MAX_BLOG_POSTS  200
+#define LINE_LEN        ( sizeof( BLOG_POST ) )
 
 // Static variables
 static BLOG_POST s_asList[MAX_BLOG_POSTS] = { 0, };
@@ -19,6 +20,7 @@ static xmlWrapperPtr psTextReader = _null_;
 static ERROR_CODE CreateDatabaseFile( void );
 static ERROR_CODE ExtractAndPopulate( const char *pszElementName, char *pszBufferToPopulate, uint32_t ulBufferSize );
 static ERROR_CODE ReadDatabaseFile( void );
+static ERROR_CODE ExtractFromLine( const char *pszTemp, BLOG_POST *psPost );
 
 static ERROR_CODE ExtractAndPopulate( const char *pszElementName, char *pszBufferToPopulate, uint32_t ulBufferSize )
 {
@@ -29,7 +31,15 @@ static ERROR_CODE ExtractAndPopulate( const char *pszElementName, char *pszBuffe
    UTIL_ASSERT( ulBufferSize > 0, INVALID_ARG );
 
    RETURN_ON_FAIL( ExtractDataFromElement( psTextReader, pszElementName, szTemp, sizeof( szTemp ) ) );
-   RETURN_ON_FAIL( Strcpy_safe( pszBufferToPopulate, szTemp, ulBufferSize ) );
+   if( strlen( szTemp ) == 0 )
+   {
+      RETURN_ON_FAIL( Strcpy_safe( pszBufferToPopulate, " ", ulBufferSize ) );
+   }
+   else
+   {
+      RETURN_ON_FAIL( Strcpy_safe( pszBufferToPopulate, szTemp, ulBufferSize ) );
+   }
+
 
    return NO_ERROR;
 }
@@ -71,12 +81,21 @@ ERROR_CODE ReadFeedXmlFile( void )
       y++;
    }
 
+
    return NO_ERROR;
 }
 
-ERROR_CODE Database_Init( void )
+ERROR_CODE Database_Init( bool bReadXmlFile )
 {
-   ReadDatabaseFile();
+   if( bReadXmlFile )
+   {
+      ReadFeedXmlFile();
+      CreateDatabaseFile();
+   }
+   else
+   {
+      ReadDatabaseFile();
+   }
 
    return NO_ERROR;
 }
@@ -114,26 +133,71 @@ ERROR_CODE ReadDatabaseFile( void )
    else
    {
       uint32_t x = 0;
-      int iRet = 0, y = 0;
-      char szTemp[sizeof( BLOG_POST ) + 1] = { 0, };
+      int y = 0;
+      char szTemp[LINE_LEN + 1] = { 0, };
+      char *pszRet = " ";
 
-      while( x < MAX_BLOG_POSTS )
+      while( ( pszRet != _null_ ) && ( x < MAX_BLOG_POSTS ) )
       {
-         iRet = fgets( szTemp, sizeof( szTemp ), pFile );
-         if( iRet < 0 )
+         pszRet = fgets( szTemp, sizeof( szTemp ), pFile );
+         if( pszRet != _null_ )
          {
-            eRet = FILE_ERROR;
-            break;
+            printf( "line = %s\n", szTemp );
+            RETURN_ON_FAIL( ExtractFromLine( szTemp, &s_asList[x] ) );
+
+            //printf( DATABASE_FORMAT, s_asList[x].szTitle, s_asList[x].szLink, s_asList[x].aszCategory[0], s_asList[x].aszCategory[1], s_asList[x].aszCategory[2], s_asList[x].szDescription, s_asList[x].iNumOfTimesShared );
          }
 
-         // TODO: Extract each arg
-
-         printf( DATABASE_FORMAT, s_asList[x].szTitle, s_asList[x].szLink, s_asList[x].aszCategory[0], s_asList[x].aszCategory[1], s_asList[x].aszCategory[2], s_asList[x].szDescription, s_asList[x].iNumOfTimesShared );
          x++;
       }
 
       fclose( pFile );
    }
+
+   return NO_ERROR;
+}
+
+ERROR_CODE ExtractFromLine( const char *pszTemp, BLOG_POST *psPost )
+{
+   char szTemp[LINE_LEN + 1] = { 0, };
+   char *pszToken = ",", *pszCurrentPosition = _null_;
+
+   RETURN_ON_NULL( pszTemp );
+   RETURN_ON_NULL( psPost );
+   memset( psPost, 0, sizeof( BLOG_POST ) );
+
+   Strcpy_safe( szTemp, pszTemp, sizeof( szTemp ) );
+
+#define TOKENIZE( x, y ) \
+   {\
+      if( pszCurrentPosition != _null_ ) \
+      { \
+         pszCurrentPosition = strtok( x, pszToken ); \
+         if( pszCurrentPosition != _null_ ) \
+         { \
+            printf( "pszCurrentPosition = %s", pszCurrentPosition ); \
+            Strcpy_safe( y, pszCurrentPosition, sizeof( y ) ); \
+         }\
+      } \
+   } \
+
+   TOKENIZE( szTemp, psPost->szTitle );
+   printf( "here\n" );
+   TOKENIZE( _null_, psPost->szLink );
+   printf( "here\n" );
+   TOKENIZE( _null_, psPost->aszCategory[0] );
+   printf( "here\n" );
+   TOKENIZE( _null_, psPost->aszCategory[1] );
+   printf( "here\n" );
+   TOKENIZE( _null_, psPost->aszCategory[2] );
+   printf( "here\n" );
+   TOKENIZE( _null_, psPost->szDescription );
+   printf( "here\n" );
+
+   pszCurrentPosition = strtok( _null_, pszToken );
+   psPost->iNumOfTimesShared = atoi( pszCurrentPosition );
+   printf( "End\n" );
+
 
    return NO_ERROR;
 }

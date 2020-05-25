@@ -20,6 +20,6 @@ typedef struct
 } BLOG_POST;
 
 ERROR_CODE ReadFeedXmlFile( void );
-ERROR_CODE Database_Init( void );
+ERROR_CODE Database_Init( bool bReadXmlFile );
 
 #endif
