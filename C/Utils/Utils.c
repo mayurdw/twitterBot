@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <time.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include "Utils.h"
 
 ERROR_CODE Strcpy_safe( char* pszDest, const char* pszSrc, uint32_t ulBufferSize )
@@ -47,5 +48,33 @@ ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize)
     snprintf(pszFileName, ulBufferSize, pszFileFormat, psTimeNow->tm_year + 1900, psTimeNow->tm_mon + 1, psTimeNow->tm_mday);
 
     return NO_ERROR;
+}
+
+void Dbg_printf( const char *pszFunc, int iLine, char *pszFormat, ... )
+{
+   FILE *pDbgFile = _null_;
+   char szBuffer[4096 + 1] = { 0, };
+   uint32_t ulSpaceLeft = sizeof( szBuffer );
+   uint32_t ulIndex = 0;
+   va_list args;
+
+   snprintf( szBuffer, ulSpaceLeft, "%s:%i|", pszFunc, iLine );
+   ulIndex = strlen( szBuffer );
+   ulSpaceLeft -= ulIndex;
+
+   va_start( args, pszFormat );
+   vsnprintf( szBuffer + ulIndex, ulSpaceLeft, pszFormat, args );
+   va_end( args );
+
+   pDbgFile = fopen( "Log.txt", "a+" );
+   fprintf( pDbgFile, "%s\n", szBuffer );
+   fclose( pDbgFile );
+}
+
+void Dbg_Init( void )
+{
+   DBG_PRINTF( "------------------------------------" );
+   DBG_PRINTF( "Bot execution time %s", __TIMESTAMP__ );
+   DBG_PRINTF( "------------------------------------" );
 }
 

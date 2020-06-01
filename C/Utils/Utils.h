@@ -28,8 +28,11 @@ typedef enum
 #define RETURN_ON_FAIL(x)   { if( ISERROR( x ) ) { printf( "%d|%s: Error eRet = %d\n", __LINE__, __func__, x ); return x; }}
 #define RETURN_ON_NULL(x)   { if( x == _null_ ) RETURN_ON_FAIL( INVALID_ARG ); }
 #define UTIL_ASSERT(x,y)    { if( !x ) return y; }
+#define DBG_INIT()          { Dbg_Init(); }
+#define DBG_PRINTF(x,...)   { Dbg_printf( __func__, __LINE__, x, ##__VA_ARGS__ ); }
 
 ERROR_CODE Strcpy_safe( char* pszDest, const char* pszSrc, uint32_t ulBufferSize );
 ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize);
-
+void Dbg_printf( const char *pszFunc, int iLine, char *pszFormat, ... );
+void Dbg_Init( void );
 #endif

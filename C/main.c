@@ -27,18 +27,21 @@
 
 int main()
 {
-   bool bReadXmlFile = false;
+   DBG_INIT();
 
-   // Config init
-   RETURN_ON_FAIL( ReadConfig() );
-   if( IsNewFileRequired() )
-   {
-      bReadXmlFile = true;
-      printf( "Downloading new feed file\n" );
-      RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
-      RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
-   }
+   DBG_PRINTF( "Test" );
+   //bool bReadXmlFile = false;
 
-   RETURN_ON_FAIL( Database_Init( bReadXmlFile ) );
-   return(0);
+   //// Config init
+   //RETURN_ON_FAIL( ReadConfig() );
+   //if( IsNewFileRequired() )
+   //{
+   //   bReadXmlFile = true;
+   //   printf( "Downloading new feed file\n" );
+   //   RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
+   //   RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
+   //}
+
+   //RETURN_ON_FAIL( Database_Init( bReadXmlFile ) );
+   //return(0);
 }
