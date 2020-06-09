@@ -29,10 +29,9 @@ int main()
 {
    DBG_INIT();
 
-   DBG_PRINTF( "Test" );
-   //bool bReadXmlFile = false;
+   RETURN_ON_FAIL( Config_Init() );
+   //RETURN_ON_FAIL( Database_Init() );
 
-   //// Config init
    //RETURN_ON_FAIL( ReadConfig() );
    //if( IsNewFileRequired() )
    //{
@@ -43,5 +42,5 @@ int main()
    //}
 
    //RETURN_ON_FAIL( Database_Init( bReadXmlFile ) );
-   //return(0);
+   return( 0 );
 }

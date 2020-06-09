@@ -8,40 +8,51 @@
 #include "config.h"
 
 // Preprocessors defines
-#define CONFIG_FILENAME         "config.xml"
+#define CONFIG_FILENAME         ( "config.xml" )
+#define DBG_CONFIG              ( 0 )
 
 // Statics
 static BOT_CONFIG s_sBotConfig = { 0, };
 static const char *s_apszConfigKeys[] = { "currentFilename", "daysToFileUpdate" };
 
 static void DebugConfig( void );
-static ERROR_CODE InitConfig( void );
+static ERROR_CODE Config_Reset( void );
 static ERROR_CODE WriteConfig( const BOT_CONFIG *psBotConfig );
+static ERROR_CODE Config_Read( void );
 
-ERROR_CODE ReadConfig(void)
+ERROR_CODE Config_Init( void )
+{
+   ERROR_CODE eRet = NO_ERROR;
+
+   eRet = Config_Read();
+   if( ISERROR( eRet ) )
+   {
+      DBG_PRINTF( "OpenXml returned = %d, Initialising config\n", eRet );
+      eRet = Config_Reset();
+   }
+
+   DebugConfig();
+
+   return eRet;
+}
+
+static ERROR_CODE Config_Read(void)
 {
    ERROR_CODE eRet = NO_ERROR;
    uint32_t x = 0;
    xmlWrapperPtr psConfigFilePtr = _null_;
 
    eRet = OpenXmlFile( &psConfigFilePtr, CONFIG_FILENAME );
-   if( ISERROR( eRet ) )
-   {
-      printf( "OpenXml returned = %d, Initialising config\n", eRet );
-      InitConfig();
-   }
-   else
+   if( !ISERROR( eRet ) )
    {
       RETURN_ON_FAIL( ExtractDataFromElement( psConfigFilePtr, s_apszConfigKeys[x++], s_sBotConfig.szRssFilename, sizeof( s_sBotConfig.szRssFilename ) ) );
       RETURN_ON_FAIL( ExtractDataFromElement( psConfigFilePtr, s_apszConfigKeys[x++], s_sBotConfig.szDaysUntilUpdate, sizeof( s_sBotConfig.szDaysUntilUpdate ) ) );
    }
 
-   DebugConfig();
-
    CleanupDumpXmlMemory( );
    psConfigFilePtr = _null_;
 
-   return NO_ERROR;
+   return eRet;
 }
 
 bool IsNewFileRequired()
@@ -86,15 +97,15 @@ ERROR_CODE Config_SetDaysUntilUpdate( const char *pszDaysUntilUpdate )
 static void DebugConfig(void)
 {
 #if DBG_CONFIG
-   printf( "------------------------------" );
-   printf( "Debugging config.xml\n", __func__ );
-   printf( "Current filename = %s\n", s_sBotConfig.szRssFilename );
-   printf( "Days Until Next Update = %s\n", s_sBotConfig.szDaysUntilUpdate );
-   printf( "------------------------------" );
+   DBG_PRINTF( "------------------------------" );
+   DBG_PRINTF( "Debugging config.xml" );
+   DBG_PRINTF( "Current filename = %s", s_sBotConfig.szRssFilename );
+   DBG_PRINTF( "Days Until Next Update = %s", s_sBotConfig.szDaysUntilUpdate );
+   DBG_PRINTF( "------------------------------" );
 #endif
 }
 
-static ERROR_CODE InitConfig(void)
+static ERROR_CODE Config_Reset(void)
 {
    BOT_CONFIG sBotConfig = { 0, };
    

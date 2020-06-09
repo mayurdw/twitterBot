@@ -16,7 +16,8 @@ typedef struct
    char szDaysUntilUpdate[2 + 1];
 } BOT_CONFIG;
 
-ERROR_CODE ReadConfig( void );
+
+ERROR_CODE Config_Init( void );
 bool IsNewFileRequired( void );
 
 // Getters & setters
