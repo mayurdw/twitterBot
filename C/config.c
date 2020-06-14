@@ -11,6 +11,12 @@
 #define CONFIG_FILENAME         ( "config.xml" )
 #define DBG_CONFIG              ( 0 )
 
+typedef struct
+{
+   char *pszElementName;
+
+} XML_ELEMENT;
+
 // Statics
 static BOT_CONFIG s_sBotConfig = { 0, };
 static const char *s_apszConfigKeys[] = { "currentFilename", "daysToFileUpdate" };
