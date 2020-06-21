@@ -138,6 +138,7 @@ C/CMakeFiles/XML.dir/DependInfo.cmake
 C/CMakeFiles/XML.dir/flags.make
 C/CMakeFiles/XML.dir/link.txt
 C/CMakeFiles/XML.dir/progress.make
+C/CMakeFiles/*
 C/xmlWrapper/CMakeFiles/CMakeDirectoryInformation.cmake
 C/xmlWrapper/CMakeFiles/progress.marks
 C/xmlWrapper/CMakeFiles/xmlWrapper.dir/build.make
@@ -176,3 +177,5 @@ C/Utils/Makefile
 C/Utils/config.xml
 C/out
 C/.vs
+C/*.xml
+Utils/CMakeFiles/*

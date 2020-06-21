@@ -52,7 +52,6 @@ ERROR_CODE GenerateFileName(char* pszFileName, uint32_t ulBufferSize)
 
 void Dbg_printf( const char *pszFunc, int iLine, char *pszFormat, ... )
 {
-   FILE *pDbgFile = _null_;
    char szBuffer[4096 + 1] = { 0, };
    uint32_t ulSpaceLeft = sizeof( szBuffer );
    uint32_t ulIndex = 0;
@@ -66,9 +65,7 @@ void Dbg_printf( const char *pszFunc, int iLine, char *pszFormat, ... )
    vsnprintf( szBuffer + ulIndex, ulSpaceLeft, pszFormat, args );
    va_end( args );
 
-   pDbgFile = fopen( "Log.txt", "a+" );
-   fprintf( pDbgFile, "%s\n", szBuffer );
-   fclose( pDbgFile );
+   printf( "%s\n", szBuffer );
 }
 
 void Dbg_Init( void )

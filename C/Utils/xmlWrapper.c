@@ -169,14 +169,33 @@ typedef struct
 
 ERROR_CODE XmlTest( void )
 {
-   TEST_ITEM sItem[] =
+   TEST_ITEM asItem[] =
    {
       XML_STR( "element", TEXT_STRUCT, szOne ),
       XML_STR( "second", TEXT_STRUCT, szTwo ),
    };
+   xmlDocPtr doc = _null_;
 
-   DBG_PRINTF( "sItem = [%s,%d,%d]", sItem[0].pszElementName, sItem[0].ulMemberOffset, sItem[0].ulBufferSize );
-   DBG_PRINTF( "sItem = [%s,%d,%d]", sItem[1].pszElementName, sItem[1].ulMemberOffset, sItem[1].ulBufferSize );
+   DBG_PRINTF( "asItem = [%s,%d,%d]", asItem[0].pszElementName, asItem[0].ulMemberOffset, asItem[0].ulBufferSize );
+   DBG_PRINTF( "asItem = [%s,%d,%d]", asItem[1].pszElementName, asItem[1].ulMemberOffset, asItem[1].ulBufferSize );
+
+   doc = xmlParseFile( "config.xml" );
+   if( !doc )
+   {
+      DBG_PRINTF( "Couldn't open file" );
+   }
+
+   xmlNodePtr cur = xmlDocGetRootElement( doc );
+
+
+   DBG_PRINTF( "Root Element of the xml is [%s]", BAD_CAST ( cur->name ));
+   cur = cur->xmlChildrenNode;
+   DBG_PRINTF( "Child Element of root is [%s]", BAD_CAST ( cur->name ));
+   cur = cur->next;
+   DBG_PRINTF( "Child Element of root is [%s]", BAD_CAST ( cur->name ));
+   xmlChar *key = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+   DBG_PRINTF( "XmlListGetString is [%s]", key);
+   xmlFree(key);
 
    return NO_ERROR;
 }
