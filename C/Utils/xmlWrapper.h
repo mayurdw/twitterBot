@@ -15,26 +15,16 @@ typedef void *xmlRootNodePtr;
 
 typedef struct
 {
-   // Data name
-   // Structure type
-   // Output variable
-   // Out max size
-   // Child element
-} XML_ITEM;
-
-typedef struct
-{
    xmlDocWriterPtr ppsDocPtr;
    xmlRootNodePtr ppsRootNodePtr;
 } xmlWriterPtrs;
 
-
-ERROR_CODE OpenXmlFile( xmlWrapperPtr *ppsFilePtr, const char *pszFilename );
-ERROR_CODE FindElement( const xmlWrapperPtr psFilePtr, const char *pszElementName, bool *pbFound );
-ERROR_CODE ExtractDataFromElement( const xmlWrapperPtr psFilePtr, const char *pszElementName, char *pszDataBuffer, uint32_t ulBufferLen );
-ERROR_CODE CleanupDumpXmlMemory( void );
-ERROR_CODE CreateDocPtr( xmlWriterPtrs *psXmlFile );
-ERROR_CODE CreateXmlNode( const xmlWriterPtrs *psXmlFile, const char *pszElement, const char *pszData );
-ERROR_CODE WriteXmlFile( const xmlWriterPtrs *psXmlFile, const char *pszFilename );
-ERROR_CODE XmlTest( void );
+ERROR_CODE OpenXmlFile(xmlWrapperPtr *ppsFilePtr, const char *pszFilename);
+ERROR_CODE FindElement(const xmlWrapperPtr psFilePtr, const char *pszElementName, bool *pbFound);
+ERROR_CODE ExtractDataFromElement(const xmlWrapperPtr psFilePtr, const char *pszElementName, char *pszDataBuffer, uint32_t ulBufferLen);
+ERROR_CODE CleanupDumpXmlMemory(void);
+ERROR_CODE CreateDocPtr(xmlWriterPtrs *psXmlFile);
+ERROR_CODE CreateXmlNode(const xmlWriterPtrs *psXmlFile, const char *pszElement, const char *pszData);
+ERROR_CODE WriteXmlFile(const xmlWriterPtrs *psXmlFile, const char *pszFilename);
+ERROR_CODE XmlTest(void);
 #endif
