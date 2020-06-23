@@ -170,56 +170,139 @@ typedef struct
 #define XML_SUB_TABLE( element, structure, var) element, offsetof(structure,var), sizeof(((structure*)0)->var), XML_SUB_TABLE
 // TODO: Add number of items
 #define XML_ARRAY(element,structure,var) element, offsetof(structure,var), sizeof(((structure*)0)->var),XML_ARRAY
-typedef struct
-{
-   char szOne[32 + 1];
-   char szTwo[16 + 1];
-} TEXT_STRUCT;
 
-ERROR_CODE xmlWrapperParseFile( const char *pszFileName, XML_ITEM *pasItems, uint32_t ulArraySize, TEXT_STRUCT *psOutputStruct )
+ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItems, uint32_t ulArraySize, void *pvOutputStruct )
 {
+   xmlDocPtr pDoc = _null_;
+   xmlNodePtr pNode = _null_;
+
    RETURN_ON_NULL( pszFileName );
    RETURN_ON_NULL( pasItems );
-   RETURN_ON_NULL( psOutputStruct );
+   RETURN_ON_NULL( pvOutputStruct );
    UTIL_ASSERT( ulArraySize != 0, INVALID_ARG );
 
+   // Not sure what it does exactly, but adding it anyway
+   xmlKeepBlanksDefault(0);
 
-// doc = xmlParseFile("config.xml");
-//    if (!doc)
-//    {
-//       DBG_PRINTF("Couldn't open file");
-//    }
+   pDoc = xmlParseFile( pszFileName );
+   if( !pDoc )
+   {
+      DBG_PRINTF( "File Couldn't be opened" );
+      return FILE_ERROR;
+   }
 
-//    xmlKeepBlanksDefault(0);
-//    xmlNodePtr cur = xmlDocGetRootElement(doc);
+   // Ignore root node. But make sure it has one
+   pNode = xmlDocGetRootElement( pDoc );
+   if( pNode != _null_ )
+   {
+      uint32_t ulCount = 0;
+      //DBG_PRINTF( "Root Element = [%s]", BAD_CAST( pNode->name ) );
 
-//    DBG_PRINTF("Root Element of the xml is [%s]", BAD_CAST(cur->name));
-//    cur = cur->xmlChildrenNode;
-//    while( cur != _null_ && xmlIsBlankNode( cur ))
-//    {
-//       cur=cur->next;
-//    }
-//    DBG_PRINTF("Child Element of root is [%s], isEmpty [%d]", BAD_CAST(cur->name), xmlIsBlankNode(cur));
+      pNode = pNode->xmlChildrenNode;
+      while( pNode != _null_ && ulCount <= ulArraySize )
+      {
+         while( pNode != _null_ && xmlIsBlankNode( pNode ) )
+         {
+            pNode=pNode->next;
+         }
+         //DBG_PRINTF( "Child Node is [%s]", BAD_CAST( pNode->name ) );
+         if( strcmp( pasItems[ulCount].pszElementName, BAD_CAST( pNode->name ) ) == 0 )
+         {
+            xmlChar *pKey = xmlNodeListGetString( pDoc, pNode->xmlChildrenNode, 1 );
 
-return NO_ERROR;
+            Strcpy_safe( ( char* )( pvOutputStruct + pasItems[ulCount].ulMemberOffset ), ( const char* )pKey, pasItems[ulCount].ulBufferSize );
+
+            xmlFree( pKey );
+            ulCount++;
+         }
+
+         pNode=pNode->next;
+      }
+   }
+
+   xmlFreeDoc( pDoc );
+   return NO_ERROR;
 }
 
 ERROR_CODE XmlTest(void)
 {
    uint32_t ulTestCount = 0;
+   const char *pszFileName = "text.xml";
+
 #define PRINTF_TEST(string) ( DBG_PRINTF( "----- %s | Test Count: %u -----", string, ulTestCount++ ) ) 
 
    {
+      typedef struct{} EMPTY_STRUCT;
       XML_ITEM asTest[2] = { 0, };
-      TEXT_STRUCT sTest = { 0, };
+      EMPTY_STRUCT sTest;
 
       PRINTF_TEST( "Sanity Tests" );
       RETURN_ON_FAIL( xmlWrapperParseFile( _null_, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( xmlWrapperParseFile( "test.xml", _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( xmlWrapperParseFile( "test.xml", &asTest[2], 0, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( xmlWrapperParseFile( "test.xml", &asTest[2], 2, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 0, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 2, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( xmlWrapperParseFile( "temp.xml", &asTest[2], 2, &sTest ) == FILE_ERROR ? NO_ERROR : FAILED );
+   }
+
+   {
+      typedef struct
+      {
+         char szTo[8+1];
+         char szFrom[8+1];
+         char szHeading[16+1];
+         char szBody[64+1];
+      } BASIC_FILE;
+      BASIC_FILE sBasicFile = { 0, };
+      const XML_ITEM asItems[] =
+      {
+         XML_STR( "to", BASIC_FILE, szTo ),
+         XML_STR( "from", BASIC_FILE, szFrom ),
+         XML_STR( "heading", BASIC_FILE, szHeading ),
+         XML_STR( "body", BASIC_FILE, szBody )
+      };
+#define TO        "Tove"
+#define FROM      "Jani"
+#define HEADING   "Reminder"
+#define BODY      "Don't forget me this weekend!"
+      const char *pszFileData = 
+         "<note>"
+         "<to>" TO "</to>"
+         "<from>" FROM "</from>"
+         "<heading>" HEADING "</heading>"
+         "<body>" BODY "</body>"
+         "</note>";
+      FILE *pFile = _null_;
+      uint32_t ulBytesWritten = 0;
+
+      PRINTF_TEST( "Basic single layer file" );
+      pFile = fopen( pszFileName, "w" );
+      if( pFile == _null_ )
+      {
+         DBG_PRINTF( "Couldn't write to file" );
+      }
+      ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
+      fclose( pFile );
+      if( ulBytesWritten != strlen( pszFileData ) )
+      {
+         DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
+      }
+
+      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
+#if 0
+      DBG_PRINTF( "Items   = " );
+      DBG_PRINTF( "To      = [%s]", sBasicFile.szTo );
+      DBG_PRINTF( "From    = [%s]", sBasicFile.szFrom );
+      DBG_PRINTF( "Heading = [%s]", sBasicFile.szHeading );
+      DBG_PRINTF( "Body    = [%s]", sBasicFile.szBody );
+#endif
+      RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
    }
 
 #undef PRINTF_TEST
+   DBG_PRINTF( "All [%u] tests successfully passed", ulTestCount );
+   
    return NO_ERROR;
 }
