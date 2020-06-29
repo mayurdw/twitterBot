@@ -8,6 +8,8 @@
 #include <libxml/xmlreader.h>
 #include "xmlWrapper.h"
 
+#define XML_DEBUG ( 0 )
+
 ERROR_CODE OpenXmlFile(xmlWrapperPtr *ppsFilePtr, const char *pszFilename)
 {
    xmlTextReaderPtr pReader = _null_;
@@ -150,27 +152,6 @@ ERROR_CODE WriteXmlFile(const xmlWriterPtrs *psXmlFile, const char *pszFilename)
    return NO_ERROR;
 }
 
-typedef enum
-{
-   XML_CHILD_STRING = 0,
-   XML_SUB_TABLE,
-   XML_ARRAY
-} XML_TYPES;
-
-typedef struct
-{
-   char *pszElementName;
-   uint32_t ulMemberOffset;
-   uint32_t ulBufferSize;
-   XML_TYPES eType;
-} XML_ITEM;
-
-#define XML_STR(element, structure, var) element, offsetof(structure, var), sizeof(((structure *)0)->var), XML_CHILD_STRING
-// TODO: Add table elements?
-#define XML_SUB_TABLE( element, structure, var) element, offsetof(structure,var), sizeof(((structure*)0)->var), XML_SUB_TABLE
-// TODO: Add number of items
-#define XML_ARRAY(element,structure,var) element, offsetof(structure,var), sizeof(((structure*)0)->var),XML_ARRAY
-
 ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItems, uint32_t ulArraySize, void *pvOutputStruct )
 {
    xmlDocPtr pDoc = _null_;
@@ -196,27 +177,60 @@ ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItem
    if( pNode != _null_ )
    {
       uint32_t ulCount = 0;
-      //DBG_PRINTF( "Root Element = [%s]", BAD_CAST( pNode->name ) );
+      bool bRestartParse = false, bFound = false;
 
+#if XML_DEBUG
+      DBG_PRINTF( "Root Element = [%s]", BAD_CAST( pNode->name ) );
+#endif
       pNode = pNode->xmlChildrenNode;
-      while( pNode != _null_ && ulCount <= ulArraySize )
+      // Outer loop through ulArraySize
+      while( ulCount < ulArraySize )
       {
+#if XML_DEBUG
+         DBG_PRINTF( "Loop Index = [%u]", ulCount );
+#endif
+         // Inner loop through elements
          while( pNode != _null_ && xmlIsBlankNode( pNode ) )
          {
-            pNode=pNode->next;
+            pNode = pNode->next;
          }
-         //DBG_PRINTF( "Child Node is [%s]", BAD_CAST( pNode->name ) );
+         if( _null_ == pNode )
+         {
+            DBG_PRINTF( "We have a null Node here. Shouldn't happen" );
+            break;
+         }
+#if XML_DEBUG
+         DBG_PRINTF( "Child Node is [%s]", BAD_CAST( pNode->name ) );
+#endif
          if( strcmp( pasItems[ulCount].pszElementName, BAD_CAST( pNode->name ) ) == 0 )
          {
             xmlChar *pKey = xmlNodeListGetString( pDoc, pNode->xmlChildrenNode, 1 );
 
+#if XML_DEBUG
+            DBG_PRINTF( "Copying [%s]", pKey );
+#endif
             Strcpy_safe( ( char* )( pvOutputStruct + pasItems[ulCount].ulMemberOffset ), ( const char* )pKey, pasItems[ulCount].ulBufferSize );
 
             xmlFree( pKey );
-            ulCount++;
+            bRestartParse = true;
          }
 
-         pNode=pNode->next;
+         // Set bRestartParse if we are at the end, if it is possible?
+         // If not found, clear the memory size
+         pNode = pNode->next;
+         if( _null_ == pNode && !bRestartParse )
+         {
+            bRestartParse = true;
+            memset( ( pvOutputStruct + pasItems[ulCount].ulMemberOffset ), 0, pasItems[ulCount].ulBufferSize );
+         }
+
+         if( bRestartParse )
+         {
+            ulCount++;
+            pNode = xmlDocGetRootElement( pDoc );
+            pNode = pNode->xmlChildrenNode;
+            bRestartParse = false;
+         }
       }
    }
 
@@ -229,7 +243,11 @@ ERROR_CODE XmlTest(void)
    uint32_t ulTestCount = 0;
    const char *pszFileName = "text.xml";
 
+#if XML_DEBUG
 #define PRINTF_TEST(string) ( DBG_PRINTF( "----- %s | Test Count: %u -----", string, ulTestCount++ ) ) 
+#else
+#define PRINTF_TEST(string) ( 0 )
+#endif
 
    {
       typedef struct{} EMPTY_STRUCT;
@@ -288,7 +306,65 @@ ERROR_CODE XmlTest(void)
       }
 
       RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
-#if 0
+#if XML_DEBUG
+      DBG_PRINTF( "Items   = " );
+      DBG_PRINTF( "To      = [%s]", sBasicFile.szTo );
+      DBG_PRINTF( "From    = [%s]", sBasicFile.szFrom );
+      DBG_PRINTF( "Heading = [%s]", sBasicFile.szHeading );
+      DBG_PRINTF( "Body    = [%s]", sBasicFile.szBody );
+#endif
+      RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   }
+
+   {
+      
+      typedef struct
+      {
+         char szTo[8+1];
+         char szFrom[8+1];
+         char szHeading[16+1];
+         char szBody[64+1];
+      } BASIC_FILE;
+      BASIC_FILE sBasicFile = { 0, };
+      const XML_ITEM asItems[] =
+      {
+         XML_STR( "to", BASIC_FILE, szTo ),
+         XML_STR( "from", BASIC_FILE, szFrom ),
+         XML_STR( "heading", BASIC_FILE, szHeading ),
+         XML_STR( "body", BASIC_FILE, szBody )
+      };
+#define TO        "Tove"
+#define FROM      "Jani"
+#define HEADING   "Reminder"
+#define BODY      "Don't forget me this weekend!"
+      const char *pszFileData = 
+         "<note>"
+         "<from>" FROM "</from>"
+         "<to>" TO "</to>"
+         "<body>" BODY "</body>"
+         "<heading>" HEADING "</heading>"
+         "</note>";
+      FILE *pFile = _null_;
+      uint32_t ulBytesWritten = 0;
+
+      PRINTF_TEST( "Same sample file but out of order" );
+      pFile = fopen( pszFileName, "w" );
+      if( pFile == _null_ )
+      {
+         DBG_PRINTF( "Couldn't write to file" );
+      }
+      ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
+      fclose( pFile );
+      if( ulBytesWritten != strlen( pszFileData ) )
+      {
+         DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
+      }
+
+      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
+#if XML_DEBUG
       DBG_PRINTF( "Items   = " );
       DBG_PRINTF( "To      = [%s]", sBasicFile.szTo );
       DBG_PRINTF( "From    = [%s]", sBasicFile.szFrom );

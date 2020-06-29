@@ -9,17 +9,17 @@
 
 // Preprocessors defines
 #define CONFIG_FILENAME         ( "config.xml" )
-#define DBG_CONFIG              ( 0 )
-
-typedef struct
-{
-   char *pszElementName;
-
-} XML_ELEMENT;
+#define DBG_CONFIG              ( 1 )
 
 // Statics
 static BOT_CONFIG s_sBotConfig = { 0, };
 static const char *s_apszConfigKeys[] = { "currentFilename", "daysToFileUpdate" };
+
+static const XML_ITEM s_apsConfigKeys[] = 
+{
+   XML_STR( "currentFilename",  BOT_CONFIG, szRssFilename      ),
+   XML_STR( "daysToFileUpdate", BOT_CONFIG, szDaysUntilUpdate  ),
+};
 
 static void DebugConfig( void );
 static ERROR_CODE Config_Reset( void );
@@ -45,18 +45,8 @@ ERROR_CODE Config_Init( void )
 static ERROR_CODE Config_Read(void)
 {
    ERROR_CODE eRet = NO_ERROR;
-   uint32_t x = 0;
-   xmlWrapperPtr psConfigFilePtr = _null_;
 
-   eRet = OpenXmlFile( &psConfigFilePtr, CONFIG_FILENAME );
-   if( !ISERROR( eRet ) )
-   {
-      RETURN_ON_FAIL( ExtractDataFromElement( psConfigFilePtr, s_apszConfigKeys[x++], s_sBotConfig.szRssFilename, sizeof( s_sBotConfig.szRssFilename ) ) );
-      RETURN_ON_FAIL( ExtractDataFromElement( psConfigFilePtr, s_apszConfigKeys[x++], s_sBotConfig.szDaysUntilUpdate, sizeof( s_sBotConfig.szDaysUntilUpdate ) ) );
-   }
-
-   CleanupDumpXmlMemory( );
-   psConfigFilePtr = _null_;
+   eRet = xmlWrapperParseFile( CONFIG_FILENAME, s_apsConfigKeys, ( sizeof( s_apsConfigKeys )/sizeof( s_apsConfigKeys[0] ) ), &s_sBotConfig );
 
    return eRet;
 }
