@@ -8,7 +8,7 @@
 #include <libxml/xmlreader.h>
 #include "xmlWrapper.h"
 
-#define XML_DEBUG ( 0 )
+#define XML_DEBUG ( 1 )
 
 ERROR_CODE OpenXmlFile(xmlWrapperPtr *ppsFilePtr, const char *pszFilename)
 {
@@ -375,6 +375,74 @@ ERROR_CODE XmlTest(void)
       RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
       RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
       RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   }
+
+   {
+      typedef struct
+      {
+         char szTo[8+1];
+         char szFrom[8+1];
+         char szHeading[16+1];
+         char szBody[64+1];
+      } BASIC_FILE;
+      typedef struct 
+      {
+         BASIC_FILE sFile;
+      } WRAPPER_FILE;
+      WRAPPER_FILE sBasicFile = { 0, };
+      const XML_ITEM asNote[] =
+      {
+         XML_STR( "to", BASIC_FILE, szTo ),
+         XML_STR( "from", BASIC_FILE, szFrom ),
+         XML_STR( "heading", BASIC_FILE, szHeading ),
+         XML_STR( "body", BASIC_FILE, szBody )
+      };
+      const XML_ITEM asItems[] = 
+      {
+         XML_ROOT( "root" ),
+         XML_SUB_TABLE( "note", WRAPPER_FILE, sFile, asNote, ARRAY_COUNT( asNote ) )
+      };
+#define TO        "Tove"
+#define FROM      "Jani"
+#define HEADING   "Reminder"
+#define BODY      "Don't forget me this weekend!"
+      const char *pszFileData = 
+         "<root>"
+            "<note>"
+               "<to>" TO "</to>"
+               "<from>" FROM "</from>"
+               "<heading>" HEADING "</heading>"
+               "<body>" BODY "</body>"
+            "</note>"
+         "</root>";
+      FILE *pFile = _null_;
+      uint32_t ulBytesWritten = 0;
+
+      PRINTF_TEST( "With subtable" );
+      pFile = fopen( pszFileName, "w" );
+      if( pFile == _null_ )
+      {
+         DBG_PRINTF( "Couldn't write to file" );
+      }
+      ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
+      fclose( pFile );
+      if( ulBytesWritten != strlen( pszFileData ) )
+      {
+         DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
+      }
+
+      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
+#if XML_DEBUG
+      DBG_PRINTF( "Items   = " );
+      DBG_PRINTF( "To      = [%s]", sBasicFile.sFile.szTo );
+      DBG_PRINTF( "From    = [%s]", sBasicFile.sFile.szFrom );
+      DBG_PRINTF( "Heading = [%s]", sBasicFile.sFile.szHeading );
+      DBG_PRINTF( "Body    = [%s]", sBasicFile.sFile.szBody );
+#endif
+      RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
+      RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
    }
 
 #undef PRINTF_TEST

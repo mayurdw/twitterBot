@@ -52,6 +52,7 @@ typedef enum
     {               \
         Dbg_Init(); \
     }
+#define ARRAY_COUNT(x) sizeof(x) / sizeof(x[0])
 
 ERROR_CODE Strcpy_safe(char *pszDest, const char *pszSrc, uint32_t ulBufferSize);
 ERROR_CODE GenerateFileName(char *pszFileName, uint32_t ulBufferSize);

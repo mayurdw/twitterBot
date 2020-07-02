@@ -11,24 +11,44 @@
 
 typedef enum
 {
-    XML_CHILD_STRING = 0,
+    XML_ROOT = 0,
+    XML_CHILD_STRING,
     XML_TABLE,
     XML_SUB_ARRAY
 } XML_TYPES;
 
 typedef struct
 {
+    // Name of the element in the xml
     char *pszElementName;
-    uint32_t ulMemberOffset;
-    uint32_t ulBufferSize;
+    // Type of the element
     XML_TYPES eType;
+    // Offset in the output structure
+    uint32_t ulMemberOffset;
+    // Sizeof the output variable
+    uint32_t ulBufferSize;
+    // Only applicable for XML_TABLE, pointer to the table containing XML_STRs
+    const void *pvSubItem;
+    // Only applicable for XML_TABLE number of XML_ITEMS in pvSubItem;
+    uint32_t ulArrayElements;
 } XML_ITEM;
 
-#define XML_STR(element, structure, var) element, offsetof(structure, var), sizeof(((structure *)0)->var), XML_CHILD_STRING
-// TODO: Add table elements?
-#define XML_SUB_TABLE(element, structure, var) element, offsetof(structure, var), sizeof(((structure *)0)->var), XML_TABLE
+#define XML_ROOT(element)                  \
+    {                                      \
+        element, XML_ROOT, 0, 0, _null_, 0 \
+    }
+
+#define XML_STR(element, structure, var)                                                              \
+    {                                                                                                 \
+        element, XML_CHILD_STRING, offsetof(structure, var), sizeof(((structure *)0)->var), _null_, 0 \
+    }
+#define XML_SUB_TABLE(element, structure, var, subItem, numOfElements)                                      \
+    {                                                                                                       \
+        element, XML_TABLE, offsetof(structure, var), sizeof(((structure *)0)->var), subItem, numOfElements \
+    }
+
 // TODO: Add number of items
-#define XML_ARRAY(element, structure, var) element, offsetof(structure, var), sizeof(((structure *)0)->var), XML_SUB_ARRAY
+//#define XML_ARRAY(element, structure, var) element, offsetof(structure, var), sizeof(((structure *)0)->var), XML_SUB_ARRAY
 
 typedef void *xmlWrapperPtr;
 typedef void *xmlDocWriterPtr;
