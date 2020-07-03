@@ -46,7 +46,7 @@ static ERROR_CODE Config_Read(void)
 {
    ERROR_CODE eRet = NO_ERROR;
 
-   eRet = xmlWrapperParseFile( CONFIG_FILENAME, s_apsConfigKeys, ( sizeof( s_apsConfigKeys )/sizeof( s_apsConfigKeys[0] ) ), &s_sBotConfig );
+   eRet = xmlWrapperParseFile( CONFIG_FILENAME, s_apsConfigKeys, ARRAY_COUNT( s_apsConfigKeys ), &s_sBotConfig );
 
    return eRet;
 }

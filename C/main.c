@@ -31,7 +31,7 @@ int main()
 
    RETURN_ON_FAIL( XmlTest() );
 
-   RETURN_ON_FAIL( Config_Init() );
+   //RETURN_ON_FAIL( Config_Init() );
    //RETURN_ON_FAIL( Database_Init() );
 
    //RETURN_ON_FAIL( ReadConfig() );
