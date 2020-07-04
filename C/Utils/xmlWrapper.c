@@ -242,7 +242,7 @@ ERROR_CODE XmlTest(void)
 {
    uint32_t ulTestCount = 0;
    const char *pszFileName = "text.xml";
-
+#if 0
 #if XML_DEBUG
 #define PRINTF_TEST(string) ( DBG_PRINTF( "----- %s | Test Count: %u -----", string, ulTestCount++ ) ) 
 #else
@@ -444,7 +444,48 @@ ERROR_CODE XmlTest(void)
       RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
       RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
    }
+#endif
 
+   {
+      #include <libxml/xpath.h>
+
+      xmlDocPtr doc;
+      xmlChar *xpath = ( xmlChar * )"//note/to|//note/test";
+
+      doc = xmlParseFile( pszFileName );
+      if ( _null_ == doc ) 
+      {
+         DBG_PRINTF( "Document not parsed successfully." );
+      }
+      else 
+      {
+         xmlXPathContextPtr context = xmlXPathNewContext( doc );
+         xmlXPathObjectPtr result = xmlXPathEvalExpression( xpath, context );
+
+         if( _null_ == result )
+         {
+            DBG_PRINTF( "result is NULL" );
+         }
+         else if( xmlXPathNodeSetIsEmpty(result->nodesetval))
+         {
+            xmlXPathFreeObject(result);
+            DBG_PRINTF( "No result");
+         }
+         else 
+         {
+            xmlNodeSetPtr nodeset = result->nodesetval;
+            for ( int i=0; i < nodeset->nodeNr; i++) 
+            {
+               xmlChar *keyword = xmlNodeListGetString(doc, nodeset->nodeTab[i]->xmlChildrenNode, 1);
+               DBG_PRINTF( "keyword: %s", keyword );
+               xmlFree(keyword);
+            } 
+            xmlXPathFreeObject (result);
+         }
+         xmlFreeDoc(doc);
+         xmlCleanupParser();
+      }
+   }
 #undef PRINTF_TEST
    DBG_PRINTF( "All [%u] tests successfully passed", ulTestCount );
    
