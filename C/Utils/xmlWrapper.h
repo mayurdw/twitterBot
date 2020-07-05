@@ -28,15 +28,10 @@ typedef struct
     // Sizeof the output variable
     uint32_t ulBufferSize;
     // Only applicable for XML_TABLE, pointer to the table containing XML_STRs
-    const void *pvSubItem;
+    const void *pavSubItem;
     // Only applicable for XML_TABLE number of XML_ITEMS in pvSubItem;
     uint32_t ulArrayElements;
 } XML_ITEM;
-
-#define XML_ROOT(element)                  \
-    {                                      \
-        element, XML_ROOT, 0, 0, _null_, 0 \
-    }
 
 #define XML_STR(element, structure, var)                                                              \
     {                                                                                                 \

@@ -6,9 +6,13 @@
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include <libxml/xmlreader.h>
+#include <libxml/xpath.h>
+#include <libxml/xmlstring.h>
 #include "xmlWrapper.h"
 
-#define XML_DEBUG ( 1 )
+#define XML_DEBUG ( 0 )
+
+static ERROR_CODE xmlWrapperExtractChildString( const xmlDocPtr pDoc, const XML_ITEM *psItem, void *pvOutputStruct, const xmlChar *pszPrefix, const xmlXPathContextPtr pContext );
 
 ERROR_CODE OpenXmlFile(xmlWrapperPtr *ppsFilePtr, const char *pszFilename)
 {
@@ -152,10 +156,48 @@ ERROR_CODE WriteXmlFile(const xmlWriterPtrs *psXmlFile, const char *pszFilename)
    return NO_ERROR;
 }
 
+static ERROR_CODE xmlWrapperExtractChildString( const xmlDocPtr pDoc, const XML_ITEM *psItem, void *pvOutputStruct, const xmlChar *pszPrefix, const xmlXPathContextPtr pContext )
+{
+   xmlChar szKey[32+1] = { 0, };
+
+   RETURN_ON_NULL( pDoc );
+   RETURN_ON_NULL( psItem );
+   RETURN_ON_NULL( pvOutputStruct );
+   RETURN_ON_NULL( pszPrefix );
+   RETURN_ON_NULL( pContext );
+
+   xmlStrPrintf( szKey, sizeof( szKey ), "%s/%s", pszPrefix, psItem->pszElementName );
+   xmlXPathObjectPtr pXpathObject = xmlXPathEvalExpression( szKey, pContext );
+   if( _null_ == pXpathObject || xmlXPathNodeSetIsEmpty( pXpathObject->nodesetval ) )
+   {
+#if XML_DEBUG
+      DBG_PRINTF( "Not found" );
+#endif
+      memset( ( pvOutputStruct + psItem->ulMemberOffset ), 0, psItem->ulBufferSize );
+   }
+   else 
+   {
+      xmlNodeSetPtr nodeset = pXpathObject->nodesetval;
+      for ( int i=0; i < nodeset->nodeNr; i++) 
+      {
+         xmlChar *pData = xmlNodeListGetString( pDoc, nodeset->nodeTab[i]->xmlChildrenNode, 1 );
+#if XML_DEBUG
+         DBG_PRINTF( "String found: [%s]", pData );
+#endif
+         Strcpy_safe( ( pvOutputStruct + psItem->ulMemberOffset ), pData, psItem->ulBufferSize );
+         xmlFree( pData );
+      } 
+   }
+   xmlXPathFreeObject( pXpathObject );
+
+   return NO_ERROR;
+}
+
 ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItems, uint32_t ulArraySize, void *pvOutputStruct )
 {
    xmlDocPtr pDoc = _null_;
    xmlNodePtr pNode = _null_;
+   xmlXPathContextPtr pContext = _null_ ;
 
    RETURN_ON_NULL( pszFileName );
    RETURN_ON_NULL( pasItems );
@@ -172,322 +214,357 @@ ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItem
       return FILE_ERROR;
    }
 
-   // Ignore root node. But make sure it has one
-   pNode = xmlDocGetRootElement( pDoc );
-   if( pNode != _null_ )
+   pContext = xmlXPathNewContext( pDoc );
+   if( _null_ == pContext )
    {
+      DBG_PRINTF( "XPathContext couldn't be inialized" );
+   }
+   else
+   {
+      /* code */
       uint32_t ulCount = 0;
-      bool bRestartParse = false, bFound = false;
-
-#if XML_DEBUG
-      DBG_PRINTF( "Root Element = [%s]", BAD_CAST( pNode->name ) );
-#endif
-      pNode = pNode->xmlChildrenNode;
-      // Outer loop through ulArraySize
+      
       while( ulCount < ulArraySize )
       {
-#if XML_DEBUG
-         DBG_PRINTF( "Loop Index = [%u]", ulCount );
-#endif
-         // Inner loop through elements
-         while( pNode != _null_ && xmlIsBlankNode( pNode ) )
+
+         switch( pasItems[ulCount].eType )
          {
-            pNode = pNode->next;
-         }
-         if( _null_ == pNode )
-         {
-            DBG_PRINTF( "We have a null Node here. Shouldn't happen" );
+            case XML_CHILD_STRING: 
+               RETURN_ON_FAIL( xmlWrapperExtractChildString( pDoc, &pasItems[ulCount], pvOutputStruct, "/", pContext ) );
+               break;
+
+            case XML_TABLE:
+            {
+               XML_ITEM *pasTable = ( XML_ITEM * )pasItems[ulCount].pavSubItem;
+               uint32_t ulIndex = 0, ulOffset = sizeof( XML_ITEM );
+               xmlChar szPrefix[32+1] = { 0, };
+               RETURN_ON_NULL( pasTable );
+               UTIL_ASSERT( pasItems[ulCount].ulArrayElements != 0, INVALID_ARG );
+
+               while( ulIndex < pasItems[ulCount].ulArrayElements )
+               {
+                  memset( szPrefix, 0, sizeof( szPrefix ) );
+                  xmlStrPrintf( szPrefix, sizeof( szPrefix ), "//%s", pasItems[ulCount].pszElementName );
+                  RETURN_ON_FAIL( xmlWrapperExtractChildString( pDoc, &pasTable[ulIndex], ( pvOutputStruct + pasItems[ulCount].ulMemberOffset ), szPrefix, pContext ) ); 
+                  ulIndex++;
+               }
+            }
             break;
-         }
-#if XML_DEBUG
-         DBG_PRINTF( "Child Node is [%s]", BAD_CAST( pNode->name ) );
-#endif
-         if( strcmp( pasItems[ulCount].pszElementName, BAD_CAST( pNode->name ) ) == 0 )
-         {
-            xmlChar *pKey = xmlNodeListGetString( pDoc, pNode->xmlChildrenNode, 1 );
 
-#if XML_DEBUG
-            DBG_PRINTF( "Copying [%s]", pKey );
-#endif
-            Strcpy_safe( ( char* )( pvOutputStruct + pasItems[ulCount].ulMemberOffset ), ( const char* )pKey, pasItems[ulCount].ulBufferSize );
-
-            xmlFree( pKey );
-            bRestartParse = true;
+            default: DBG_PRINTF( "Unknown type or hasn't been implemented yet = [%d]", pasItems[ulCount].eType ); break;
          }
-
-         // Set bRestartParse if we are at the end, if it is possible?
-         // If not found, clear the memory size
-         pNode = pNode->next;
-         if( _null_ == pNode && !bRestartParse )
-         {
-            bRestartParse = true;
-            memset( ( pvOutputStruct + pasItems[ulCount].ulMemberOffset ), 0, pasItems[ulCount].ulBufferSize );
-         }
-
-         if( bRestartParse )
-         {
-            ulCount++;
-            pNode = xmlDocGetRootElement( pDoc );
-            pNode = pNode->xmlChildrenNode;
-            bRestartParse = false;
-         }
+         ulCount++;
       }
    }
-
+   
    xmlFreeDoc( pDoc );
+   xmlCleanupParser();
+
+   return NO_ERROR;
+}
+
+static uint32_t s_ulTestCount = 0;
+#if XML_DEBUG
+#define PRINTF_TEST(string) ( DBG_PRINTF( "----- %s | Test Count: %u -----", string, s_ulTestCount++ ) ) 
+#else
+#define PRINTF_TEST(string) ( s_ulTestCount++ )
+#endif
+
+static ERROR_CODE xmlTestSanityTest( const char *pszFileName )
+{
+   typedef struct{} EMPTY_STRUCT;
+   XML_ITEM asTest[2] = { 0, };
+   EMPTY_STRUCT sTest;
+
+   PRINTF_TEST( "Sanity Tests" );
+   RETURN_ON_FAIL( xmlWrapperParseFile( _null_, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 0, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 2, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( "temp.xml", &asTest[2], 2, &sTest ) == FILE_ERROR ? NO_ERROR : FAILED );
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE xmlTestBasicSingleLayer( const char *pszFileName )
+{
+   typedef struct
+   {
+      char szTo[8+1];
+      char szFrom[8+1];
+      char szHeading[16+1];
+      char szBody[64+1];
+   } BASIC_FILE;
+   BASIC_FILE sBasicFile = { 0, };
+   const XML_ITEM asItems[] =
+   {
+      XML_STR( "to", BASIC_FILE, szTo ),
+      XML_STR( "from", BASIC_FILE, szFrom ),
+      XML_STR( "heading", BASIC_FILE, szHeading ),
+      XML_STR( "body", BASIC_FILE, szBody )
+   };
+#define TO        "Tove"
+#define FROM      "Jani"
+#define HEADING   "Reminder"
+#define BODY      "Don't forget me this weekend!"
+   const char *pszFileData = 
+      "<note>"
+      "<to>" TO "</to>"
+      "<from>" FROM "</from>"
+      "<heading>" HEADING "</heading>"
+      "<body>" BODY "</body>"
+      "</note>";
+   FILE *pFile = _null_;
+   uint32_t ulBytesWritten = 0;
+
+   PRINTF_TEST( "Basic single layer file" );
+   pFile = fopen( pszFileName, "w" );
+   if( pFile == _null_ )
+   {
+      DBG_PRINTF( "Couldn't write to file" );
+   }
+   ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
+   fclose( pFile );
+   if( ulBytesWritten != strlen( pszFileData ) )
+   {
+      DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
+   }
+
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
+#if XML_DEBUG
+   DBG_PRINTF( "Items   = " );
+   DBG_PRINTF( "To      = [%s]", sBasicFile.szTo );
+   DBG_PRINTF( "From    = [%s]", sBasicFile.szFrom );
+   DBG_PRINTF( "Heading = [%s]", sBasicFile.szHeading );
+   DBG_PRINTF( "Body    = [%s]", sBasicFile.szBody );
+#endif
+   RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE xmlTestOutOfOrderSingleLayer( const char *pszFileName )
+{
+   
+   typedef struct
+   {
+      char szTo[8+1];
+      char szFrom[8+1];
+      char szHeading[16+1];
+      char szBody[64+1];
+   } BASIC_FILE;
+   BASIC_FILE sBasicFile = { 0, };
+   const XML_ITEM asItems[] =
+   {
+      XML_STR( "to", BASIC_FILE, szTo ),
+      XML_STR( "from", BASIC_FILE, szFrom ),
+      XML_STR( "heading", BASIC_FILE, szHeading ),
+      XML_STR( "body", BASIC_FILE, szBody )
+   };
+#define TO        "Tove"
+#define FROM      "Jani"
+#define HEADING   "Reminder"
+#define BODY      "Don't forget me this weekend!"
+   const char *pszFileData = 
+      "<note>"
+      "<from>" FROM "</from>"
+      "<to>" TO "</to>"
+      "<body>" BODY "</body>"
+      "<heading>" HEADING "</heading>"
+      "</note>";
+   FILE *pFile = _null_;
+   uint32_t ulBytesWritten = 0;
+
+   PRINTF_TEST( "Same sample file but out of order" );
+   pFile = fopen( pszFileName, "w" );
+   if( pFile == _null_ )
+   {
+      DBG_PRINTF( "Couldn't write to file" );
+   }
+   ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
+   fclose( pFile );
+   if( ulBytesWritten != strlen( pszFileData ) )
+   {
+      DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
+   }
+
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
+#if XML_DEBUG
+   DBG_PRINTF( "Items   = " );
+   DBG_PRINTF( "To      = [%s]", sBasicFile.szTo );
+   DBG_PRINTF( "From    = [%s]", sBasicFile.szFrom );
+   DBG_PRINTF( "Heading = [%s]", sBasicFile.szHeading );
+   DBG_PRINTF( "Body    = [%s]", sBasicFile.szBody );
+#endif
+   RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE xmlTestSimpleSubTable( const char *pszFileName )
+{
+   typedef struct
+   {
+      char szTo[8+1];
+      char szFrom[8+1];
+      char szHeading[16+1];
+      char szBody[64+1];
+   } BASIC_FILE;
+   typedef struct 
+   {
+      BASIC_FILE sFile;
+   } WRAPPER_FILE;
+   WRAPPER_FILE sBasicFile = { 0, };
+   const XML_ITEM asNote[] =
+   {
+      XML_STR( "to", BASIC_FILE, szTo ),
+      XML_STR( "from", BASIC_FILE, szFrom ),
+      XML_STR( "heading", BASIC_FILE, szHeading ),
+      XML_STR( "body", BASIC_FILE, szBody )
+   };
+   const XML_ITEM asItems[] = 
+   {
+      XML_SUB_TABLE( "note", WRAPPER_FILE, sFile, asNote, ARRAY_COUNT( asNote ) )
+   };
+#define TO        "Tove"
+#define FROM      "Jani"
+#define HEADING   "Reminder"
+#define BODY      "Don't forget me this weekend!"
+   const char *pszFileData = 
+      "<root>"
+         "<note>"
+            "<to>" TO "</to>"
+            "<from>" FROM "</from>"
+            "<heading>" HEADING "</heading>"
+            "<body>" BODY "</body>"
+         "</note>"
+      "</root>";
+   FILE *pFile = _null_;
+   uint32_t ulBytesWritten = 0;
+
+   PRINTF_TEST( "Embedded subtable" );
+   pFile = fopen( pszFileName, "w" );
+   if( pFile == _null_ )
+   {
+      DBG_PRINTF( "Couldn't write to file" );
+   }
+   ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
+   fclose( pFile );
+   if( ulBytesWritten != strlen( pszFileData ) )
+   {
+      DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
+   }
+
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
+#if XML_DEBUG
+   DBG_PRINTF( "Items   = " );
+   DBG_PRINTF( "To      = [%s]", sBasicFile.sFile.szTo );
+   DBG_PRINTF( "From    = [%s]", sBasicFile.sFile.szFrom );
+   DBG_PRINTF( "Heading = [%s]", sBasicFile.sFile.szHeading );
+   DBG_PRINTF( "Body    = [%s]", sBasicFile.sFile.szBody );
+#endif
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE xmlTestSubTableWithSiblingChild( const char *pszFileName )
+{
+   typedef struct
+   {
+      char szTo[8+1];
+      char szFrom[8+1];
+      char szHeading[16+1];
+      char szBody[64+1];
+   } BASIC_FILE;
+   typedef struct 
+   {
+      char szDetails[16+1];
+      BASIC_FILE sFile;
+   } WRAPPER_FILE;
+   WRAPPER_FILE sBasicFile = { 0, };
+   const XML_ITEM asNote[] =
+   {
+      XML_STR( "to", BASIC_FILE, szTo ),
+      XML_STR( "from", BASIC_FILE, szFrom ),
+      XML_STR( "heading", BASIC_FILE, szHeading ),
+      XML_STR( "body", BASIC_FILE, szBody )
+   };
+   const XML_ITEM asItems[] = 
+   {
+      XML_STR( "details", WRAPPER_FILE, szDetails ),
+      XML_SUB_TABLE( "note", WRAPPER_FILE, sFile, asNote, ARRAY_COUNT( asNote ) )
+   };
+#define DETAILS   "Details"
+#define TO        "Tove"
+#define FROM      "Jani"
+#define HEADING   "Reminder"
+#define BODY      "Don't forget me this weekend!"
+   const char *pszFileData = 
+      "<root>"
+         "<details>" DETAILS "</details>"
+         "<note>"
+            "<to>" TO "</to>"
+            "<from>" FROM "</from>"
+            "<heading>" HEADING "</heading>"
+            "<body>" BODY "</body>"
+         "</note>"
+      "</root>";
+   FILE *pFile = _null_;
+   uint32_t ulBytesWritten = 0;
+
+   PRINTF_TEST( "Subtable & extra child" );
+   pFile = fopen( pszFileName, "w" );
+   if( pFile == _null_ )
+   {
+      DBG_PRINTF( "Couldn't write to file" );
+   }
+   ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
+   fclose( pFile );
+   if( ulBytesWritten != strlen( pszFileData ) )
+   {
+      DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
+   }
+
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
+#if XML_DEBUG
+   DBG_PRINTF( "Items   = " );
+   DBG_PRINTF( "Details = [%s]", sBasicFile.szDetails );
+   DBG_PRINTF( "To      = [%s]", sBasicFile.sFile.szTo );
+   DBG_PRINTF( "From    = [%s]", sBasicFile.sFile.szFrom );
+   DBG_PRINTF( "Heading = [%s]", sBasicFile.sFile.szHeading );
+   DBG_PRINTF( "Body    = [%s]", sBasicFile.sFile.szBody );
+#endif
+   RETURN_ON_FAIL( strcmp( sBasicFile.szDetails, DETAILS ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+
    return NO_ERROR;
 }
 
 ERROR_CODE XmlTest(void)
 {
-   uint32_t ulTestCount = 0;
    const char *pszFileName = "text.xml";
-#if 0
-#if XML_DEBUG
-#define PRINTF_TEST(string) ( DBG_PRINTF( "----- %s | Test Count: %u -----", string, ulTestCount++ ) ) 
-#else
-#define PRINTF_TEST(string) ( 0 )
-#endif
 
-   {
-      typedef struct{} EMPTY_STRUCT;
-      XML_ITEM asTest[2] = { 0, };
-      EMPTY_STRUCT sTest;
+   RETURN_ON_FAIL( xmlTestSanityTest( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestBasicSingleLayer( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestOutOfOrderSingleLayer( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestSimpleSubTable( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestSubTableWithSiblingChild( pszFileName ) );
 
-      PRINTF_TEST( "Sanity Tests" );
-      RETURN_ON_FAIL( xmlWrapperParseFile( _null_, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 0, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 2, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( xmlWrapperParseFile( "temp.xml", &asTest[2], 2, &sTest ) == FILE_ERROR ? NO_ERROR : FAILED );
-   }
-
-   {
-      typedef struct
-      {
-         char szTo[8+1];
-         char szFrom[8+1];
-         char szHeading[16+1];
-         char szBody[64+1];
-      } BASIC_FILE;
-      BASIC_FILE sBasicFile = { 0, };
-      const XML_ITEM asItems[] =
-      {
-         XML_STR( "to", BASIC_FILE, szTo ),
-         XML_STR( "from", BASIC_FILE, szFrom ),
-         XML_STR( "heading", BASIC_FILE, szHeading ),
-         XML_STR( "body", BASIC_FILE, szBody )
-      };
-#define TO        "Tove"
-#define FROM      "Jani"
-#define HEADING   "Reminder"
-#define BODY      "Don't forget me this weekend!"
-      const char *pszFileData = 
-         "<note>"
-         "<to>" TO "</to>"
-         "<from>" FROM "</from>"
-         "<heading>" HEADING "</heading>"
-         "<body>" BODY "</body>"
-         "</note>";
-      FILE *pFile = _null_;
-      uint32_t ulBytesWritten = 0;
-
-      PRINTF_TEST( "Basic single layer file" );
-      pFile = fopen( pszFileName, "w" );
-      if( pFile == _null_ )
-      {
-         DBG_PRINTF( "Couldn't write to file" );
-      }
-      ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
-      fclose( pFile );
-      if( ulBytesWritten != strlen( pszFileData ) )
-      {
-         DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
-      }
-
-      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
-#if XML_DEBUG
-      DBG_PRINTF( "Items   = " );
-      DBG_PRINTF( "To      = [%s]", sBasicFile.szTo );
-      DBG_PRINTF( "From    = [%s]", sBasicFile.szFrom );
-      DBG_PRINTF( "Heading = [%s]", sBasicFile.szHeading );
-      DBG_PRINTF( "Body    = [%s]", sBasicFile.szBody );
-#endif
-      RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
-   }
-
-   {
-      
-      typedef struct
-      {
-         char szTo[8+1];
-         char szFrom[8+1];
-         char szHeading[16+1];
-         char szBody[64+1];
-      } BASIC_FILE;
-      BASIC_FILE sBasicFile = { 0, };
-      const XML_ITEM asItems[] =
-      {
-         XML_STR( "to", BASIC_FILE, szTo ),
-         XML_STR( "from", BASIC_FILE, szFrom ),
-         XML_STR( "heading", BASIC_FILE, szHeading ),
-         XML_STR( "body", BASIC_FILE, szBody )
-      };
-#define TO        "Tove"
-#define FROM      "Jani"
-#define HEADING   "Reminder"
-#define BODY      "Don't forget me this weekend!"
-      const char *pszFileData = 
-         "<note>"
-         "<from>" FROM "</from>"
-         "<to>" TO "</to>"
-         "<body>" BODY "</body>"
-         "<heading>" HEADING "</heading>"
-         "</note>";
-      FILE *pFile = _null_;
-      uint32_t ulBytesWritten = 0;
-
-      PRINTF_TEST( "Same sample file but out of order" );
-      pFile = fopen( pszFileName, "w" );
-      if( pFile == _null_ )
-      {
-         DBG_PRINTF( "Couldn't write to file" );
-      }
-      ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
-      fclose( pFile );
-      if( ulBytesWritten != strlen( pszFileData ) )
-      {
-         DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
-      }
-
-      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
-#if XML_DEBUG
-      DBG_PRINTF( "Items   = " );
-      DBG_PRINTF( "To      = [%s]", sBasicFile.szTo );
-      DBG_PRINTF( "From    = [%s]", sBasicFile.szFrom );
-      DBG_PRINTF( "Heading = [%s]", sBasicFile.szHeading );
-      DBG_PRINTF( "Body    = [%s]", sBasicFile.szBody );
-#endif
-      RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
-   }
-
-   {
-      typedef struct
-      {
-         char szTo[8+1];
-         char szFrom[8+1];
-         char szHeading[16+1];
-         char szBody[64+1];
-      } BASIC_FILE;
-      typedef struct 
-      {
-         BASIC_FILE sFile;
-      } WRAPPER_FILE;
-      WRAPPER_FILE sBasicFile = { 0, };
-      const XML_ITEM asNote[] =
-      {
-         XML_STR( "to", BASIC_FILE, szTo ),
-         XML_STR( "from", BASIC_FILE, szFrom ),
-         XML_STR( "heading", BASIC_FILE, szHeading ),
-         XML_STR( "body", BASIC_FILE, szBody )
-      };
-      const XML_ITEM asItems[] = 
-      {
-         XML_ROOT( "root" ),
-         XML_SUB_TABLE( "note", WRAPPER_FILE, sFile, asNote, ARRAY_COUNT( asNote ) )
-      };
-#define TO        "Tove"
-#define FROM      "Jani"
-#define HEADING   "Reminder"
-#define BODY      "Don't forget me this weekend!"
-      const char *pszFileData = 
-         "<root>"
-            "<note>"
-               "<to>" TO "</to>"
-               "<from>" FROM "</from>"
-               "<heading>" HEADING "</heading>"
-               "<body>" BODY "</body>"
-            "</note>"
-         "</root>";
-      FILE *pFile = _null_;
-      uint32_t ulBytesWritten = 0;
-
-      PRINTF_TEST( "With subtable" );
-      pFile = fopen( pszFileName, "w" );
-      if( pFile == _null_ )
-      {
-         DBG_PRINTF( "Couldn't write to file" );
-      }
-      ulBytesWritten = fwrite( pszFileData, 1, strlen( pszFileData ), pFile );
-      fclose( pFile );
-      if( ulBytesWritten != strlen( pszFileData ) )
-      {
-         DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
-      }
-
-      RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
-#if XML_DEBUG
-      DBG_PRINTF( "Items   = " );
-      DBG_PRINTF( "To      = [%s]", sBasicFile.sFile.szTo );
-      DBG_PRINTF( "From    = [%s]", sBasicFile.sFile.szFrom );
-      DBG_PRINTF( "Heading = [%s]", sBasicFile.sFile.szHeading );
-      DBG_PRINTF( "Body    = [%s]", sBasicFile.sFile.szBody );
-#endif
-      RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-      RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
-   }
-#endif
-
-   {
-      #include <libxml/xpath.h>
-
-      xmlDocPtr doc;
-      xmlChar *xpath = ( xmlChar * )"//note/to|//note/test";
-
-      doc = xmlParseFile( pszFileName );
-      if ( _null_ == doc ) 
-      {
-         DBG_PRINTF( "Document not parsed successfully." );
-      }
-      else 
-      {
-         xmlXPathContextPtr context = xmlXPathNewContext( doc );
-         xmlXPathObjectPtr result = xmlXPathEvalExpression( xpath, context );
-
-         if( _null_ == result )
-         {
-            DBG_PRINTF( "result is NULL" );
-         }
-         else if( xmlXPathNodeSetIsEmpty(result->nodesetval))
-         {
-            xmlXPathFreeObject(result);
-            DBG_PRINTF( "No result");
-         }
-         else 
-         {
-            xmlNodeSetPtr nodeset = result->nodesetval;
-            for ( int i=0; i < nodeset->nodeNr; i++) 
-            {
-               xmlChar *keyword = xmlNodeListGetString(doc, nodeset->nodeTab[i]->xmlChildrenNode, 1);
-               DBG_PRINTF( "keyword: %s", keyword );
-               xmlFree(keyword);
-            } 
-            xmlXPathFreeObject (result);
-         }
-         xmlFreeDoc(doc);
-         xmlCleanupParser();
-      }
-   }
 #undef PRINTF_TEST
-   DBG_PRINTF( "All [%u] tests successfully passed", ulTestCount );
+   DBG_PRINTF( "All [%u] tests successfully passed", s_ulTestCount );
    
    return NO_ERROR;
 }
