@@ -27,23 +27,27 @@ typedef struct
     uint32_t ulMemberOffset;
     // Sizeof the output variable
     uint32_t ulBufferSize;
-    // Only applicable for XML_TABLE, pointer to the table containing XML_STRs
+    // Only applicable for XML_TABLE, XML_SUB_TABLE, pointer to the table containing XML_STRs
     const void *pavSubItem;
     // Only applicable for XML_TABLE number of XML_ITEMS in pvSubItem;
     uint32_t ulArrayElements;
+    // Only applicable for XML_SUB_TABLE
+    uint32_t ulArraySize;
 } XML_ITEM;
 
-#define XML_STR(element, structure, var)                                                              \
-    {                                                                                                 \
-        element, XML_CHILD_STRING, offsetof(structure, var), sizeof(((structure *)0)->var), _null_, 0 \
+#define XML_STR(element, structure, var)                                                                 \
+    {                                                                                                    \
+        element, XML_CHILD_STRING, offsetof(structure, var), sizeof(((structure *)0)->var), _null_, 0, 0 \
     }
-#define XML_SUB_TABLE(element, structure, var, subItem, numOfElements)                                      \
-    {                                                                                                       \
-        element, XML_TABLE, offsetof(structure, var), sizeof(((structure *)0)->var), subItem, numOfElements \
+#define XML_SUB_TABLE(element, structure, var, subItem, numOfElements)                                         \
+    {                                                                                                          \
+        element, XML_TABLE, offsetof(structure, var), sizeof(((structure *)0)->var), subItem, numOfElements, 0 \
     }
 
-// TODO: Add number of items
-//#define XML_ARRAY(element, structure, var) element, offsetof(structure, var), sizeof(((structure *)0)->var), XML_SUB_ARRAY
+#define XML_ARRAY(element, structure, var, subItem, numOfElements, arraySize)                                              \
+    {                                                                                                                      \
+        element, XML_SUB_ARRAY, offsetof(structure, var), sizeof(((structure *)0)->var), subItem, numOfElements, arraySize \
+    }
 
 typedef void *xmlWrapperPtr;
 typedef void *xmlDocWriterPtr;
