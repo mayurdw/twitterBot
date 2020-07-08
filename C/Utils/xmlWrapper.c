@@ -10,7 +10,7 @@
 #include <libxml/xmlstring.h>
 #include "xmlWrapper.h"
 
-#define XML_DEBUG ( 1 )
+#define XML_DEBUG ( 0 )
 
 static ERROR_CODE xmlWrapperExtractChildString( const xmlDocPtr pDoc, const XML_ITEM *psItem, void *pvOutputStruct, const xmlChar *pszPrefix, const xmlXPathContextPtr pContext );
 
@@ -235,7 +235,6 @@ ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItem
       
       while( ulCount < ulArraySize )
       {
-
          switch( pasItems[ulCount].eType )
          {
             case XML_CHILD_STRING: 
@@ -267,7 +266,7 @@ ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItem
                XML_ITEM *pasTable = ( XML_ITEM * )pasItems[ulCount].pavSubItem;
                uint32_t ulIndex = 0;
                xmlChar szPrefix[32+1] = { 0, };
-               uint32_t ulSingleOffset = pasItems[ulCount].ulBufferSize / pasItems[ulCount].ulArraySize;
+               uint32_t ulSingleIndexSize = pasItems[ulCount].ulBufferSize / pasItems[ulCount].ulArraySize;
 
                RETURN_ON_NULL( pasTable );
                UTIL_ASSERT( pasItems[ulCount].ulArrayElements != 0, INVALID_ARG );
@@ -279,7 +278,7 @@ ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItem
                   memset( szPrefix, 0, sizeof( szPrefix ) );
 
                   xmlStrPrintf( szPrefix, sizeof( szPrefix ), "//%s", pasItems[ulCount].pszElementName );
-                  // Get NodeSetPtr
+                  // Get xmlXPathObjectPtr
                   xmlXPathObjectPtr pXpathObject = xmlWrapperExtractNodeSetPtr( pDoc, szPrefix, pasTable[ulIndex].pszElementName, pContext );
 
                   if( _null_ == pXpathObject || xmlXPathNodeSetIsEmpty( pXpathObject->nodesetval ) )
@@ -295,7 +294,7 @@ ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItem
                      for ( int i=0; i < nodeset->nodeNr && i < pasItems[ulCount].ulArraySize; i++) 
                      {
                         xmlChar *pData = xmlNodeListGetString( pDoc, nodeset->nodeTab[i]->xmlChildrenNode, 1 );
-                        uint32_t ulOffset = ( pasTable[ulIndex].ulMemberOffset + ( ulSingleOffset * i ) );
+                        uint32_t ulOffset = pasItems[ulCount].ulMemberOffset + pasTable[ulIndex].ulMemberOffset + ( ulSingleIndexSize * i );
 #if XML_DEBUG
                         DBG_PRINTF( "String found: [%s]", pData );
 #endif
@@ -823,7 +822,7 @@ static ERROR_CODE xmlTestArrayWithSubTableAndSibling( const char *pszFileName )
       DBG_PRINTF( "Couldn't write [%d] number of bytes, only wrote [%u] bytes", strlen( pszFileData ), ulBytesWritten );
    }
 
-   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ( sizeof( asItems ) / sizeof( asItems[0] ) ), &sBasicFile ) );
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ARRAY_COUNT( asItems ), &sBasicFile ) );
 #if XML_DEBUG
    DBG_PRINTF( "Items   = " );
    DBG_PRINTF( "Details = [%s]", sBasicFile.szDetails );
@@ -874,7 +873,7 @@ ERROR_CODE XmlTest(void)
    RETURN_ON_FAIL( xmlTestSimpleSubTable( pszFileName ) );
    RETURN_ON_FAIL( xmlTestSubTableWithSiblingChild( pszFileName ) );
    RETURN_ON_FAIL( xmlTestSimpleArray( pszFileName ) );
-   //RETURN_ON_FAIL( xmlTestArrayWithSubTableAndSibling( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestArrayWithSubTableAndSibling( pszFileName ) );
 
 #undef PRINTF_TEST
    DBG_PRINTF( "All [%u] tests successfully passed", s_ulTestCount );
