@@ -11,15 +11,12 @@
 
 typedef struct
 {
-   char szTitle[128+1];
-   char szLink[128+1];
-   char aszCategory[3][32+1];
-   char szDescription[1024+1];
-   // non-xml variable
-   int iNumOfTimesShared;
+    char szTitle[128 + 1];
+    char szLink[128 + 1];
+    // non-xml variable
+    int iNumOfTimesShared;
 } BLOG_POST;
 
-ERROR_CODE ReadFeedXmlFile( void );
-ERROR_CODE Database_Init( bool bReadXmlFile );
+ERROR_CODE Database_Init(void);
 
 #endif

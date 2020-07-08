@@ -9,11 +9,10 @@
 
 // Preprocessors defines
 #define CONFIG_FILENAME         ( "config.xml" )
-#define DBG_CONFIG              ( 1 )
+#define DBG_CONFIG              ( 0 )
 
 // Statics
 static BOT_CONFIG s_sBotConfig = { 0, };
-static const char *s_apszConfigKeys[] = { "currentFilename", "daysToFileUpdate" };
 
 static const XML_ITEM s_apsConfigKeys[] = 
 {
@@ -118,14 +117,7 @@ static ERROR_CODE Config_Reset(void)
 
 static ERROR_CODE WriteConfig( const BOT_CONFIG *psBotConfig )
 {
-   xmlWriterPtrs sWriter = { 0, };
-
-   RETURN_ON_NULL( psBotConfig );
-
-   RETURN_ON_FAIL( CreateDocPtr( &sWriter ) );
-   RETURN_ON_FAIL( CreateXmlNode( &sWriter, s_apszConfigKeys[0], psBotConfig->szRssFilename ) );
-   RETURN_ON_FAIL( CreateXmlNode( &sWriter, s_apszConfigKeys[1], psBotConfig->szDaysUntilUpdate ) );
-   RETURN_ON_FAIL( WriteXmlFile( &sWriter, CONFIG_FILENAME ) );
+   // TODO: Write config
 
    return NO_ERROR;
 }
