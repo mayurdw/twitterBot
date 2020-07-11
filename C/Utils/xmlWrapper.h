@@ -52,6 +52,5 @@ typedef struct
 ERROR_CODE XmlTest(void);
 
 ERROR_CODE xmlWrapperParseFile(const char *pszFileName, const XML_ITEM *pasItems, uint32_t ulArraySize, void *pvOutputStruct);
-// TODO: Figure out how to writeFile with the same method too
-
+ERROR_CODE xmlWrapperWriteFile(const char *pszFileName, const XML_ITEM *pasItems, uint32_t ulArraySize, const void *pvInputStruct);
 #endif

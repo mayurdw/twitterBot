@@ -3,11 +3,10 @@
     Created: January 2020
 */
 
-#include <libxml/xmlmemory.h>
-#include <libxml/parser.h>
-#include <libxml/xmlreader.h>
 #include <libxml/xpath.h>
 #include <libxml/xmlstring.h>
+#include <libxml/encoding.h>
+#include <libxml/xmlwriter.h>
 #include "xmlWrapper.h"
 
 // Defines
@@ -183,6 +182,98 @@ ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItem
    
    xmlFreeDoc( pDoc );
    xmlCleanupParser();
+
+   return NO_ERROR;
+}
+
+#define MY_ENCODING     "UTF-8"
+ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItems, uint32_t ulArraySize, const void *pvInputStruct )
+{
+   int iRet = 0;
+   xmlTextWriterPtr pWriter = _null_;
+   uint32_t ulCount = 0;
+
+   RETURN_ON_NULL( pszFileName );
+   RETURN_ON_NULL( pasItems );
+   RETURN_ON_NULL( pvInputStruct );
+   UTIL_ASSERT( ulArraySize != 0, INVALID_ARG );
+
+
+   /* Create a new XmlWriter for uri, with no compression. */
+   pWriter = xmlNewTextWriterFilename(pszFileName, 0);
+   if (pWriter == NULL) {
+      DBG_PRINTF("Error creating the xml pWriter = [%d]", iRet );
+      return FAILED;
+   }
+
+   iRet = xmlTextWriterStartDocument(pWriter, NULL, MY_ENCODING, NULL);
+   if (iRet < 0) {
+      DBG_PRINTF( "testXmlwriterFilename: Error at xmlTextWriterStartDocument" );
+      return FAILED;
+   }
+
+   // Parent element
+   iRet = xmlTextWriterStartElement(
+      pWriter, 
+      BAD_CAST "root" );
+   if (iRet < 0) {
+      DBG_PRINTF("testXmlwriterFilename: Error at xmlTextWriterStartElement");
+      return FAILED;
+   }
+
+
+   while( ulCount < ulArraySize )
+   {
+      switch (pasItems[ulCount].eType)
+      {
+      case XML_CHILD_STRING:
+         /* Write an element named "CUSTOMER_ID" as child of HEADER. */
+         iRet = xmlTextWriterWriteFormatElement(
+            pWriter, 
+            BAD_CAST pasItems[ulCount].pszElementName,
+            "%s", 
+            ( const char * )( pvInputStruct + pasItems[ulCount].ulMemberOffset ) );
+         if (iRet < 0) 
+         {
+            DBG_PRINTF( "testXmlwriterFilename: Error at xmlTextWriterWriteFormatElement" );
+            return FAILED;
+         }
+         break;
+      
+#if 0
+
+    iRet = xmlTextWriterStartElement(pWriter, BAD_CAST "HEADER");
+    if (iRet < 0) {
+        DBG_PRINTF
+            ("testXmlwriterFilename: Error at xmlTextWriterStartElement");
+        return FAILED;
+    }
+
+    /* Close the element named HEADER. */
+    iRet = xmlTextWriterEndElement(pWriter);
+    if (iRet < 0) {
+        DBG_PRINTF
+            ("testXmlwriterFilename: Error at xmlTextWriterEndElement");
+        return FAILED;
+    }
+
+#endif
+
+      default:
+         DBG_PRINTF( "Unknown element [%d], ignoring the element" );
+         break;
+      }
+      ulCount++;
+   }
+
+    iRet = xmlTextWriterEndDocument(pWriter);
+    if (iRet < 0) {
+        DBG_PRINTF
+            ("testXmlwriterFilename: Error at xmlTextWriterEndDocument");
+        return FAILED;
+    }
+
+    xmlFreeTextWriter(pWriter);
 
    return NO_ERROR;
 }
@@ -729,6 +820,68 @@ static ERROR_CODE xmlTestArrayWithSubTableAndSibling( const char *pszFileName )
    return NO_ERROR;
 }
 
+static ERROR_CODE xmlTestWriteSimpleLayer( const char *pszFileName )
+{
+   typedef struct 
+   {
+      char szTo[8+1];
+      char szFrom[8+1];
+      char szSubject[16+1];
+      char szBody[64+1];
+   } SIMPLE_LAYER;
+   SIMPLE_LAYER sWriteLayer = {0,}, sReadLayer = {0,};
+   const XML_ITEM asItems[] =
+   {
+      XML_STR( "to", SIMPLE_LAYER, szTo ),
+      XML_STR( "from", SIMPLE_LAYER, szFrom ),
+      XML_STR( "subject", SIMPLE_LAYER, szSubject ),
+      XML_STR( "body", SIMPLE_LAYER, szBody )
+   };
+#define TO        "Tove"
+#define FROM      "Jani"
+#define SUBJECT   "Reminder"
+#define BODY      "Don't forget about me"
+   // Copy elements
+
+   PRINTF_TEST( "Writing simple single layer" );
+   Strcpy_safe( sWriteLayer.szTo, TO, sizeof( sWriteLayer.szTo ) );
+   Strcpy_safe( sWriteLayer.szFrom, FROM, sizeof( sWriteLayer.szFrom ) );
+   Strcpy_safe( sWriteLayer.szSubject, SUBJECT, sizeof( sWriteLayer.szSubject ) );
+   Strcpy_safe( sWriteLayer.szBody, BODY, sizeof( sWriteLayer.szBody ) );
+
+   // Write into file
+   RETURN_ON_FAIL( xmlWrapperWriteFile( pszFileName, asItems, ARRAY_COUNT(asItems), &sWriteLayer ) );
+#if XML_DEBUG
+   DBG_PRINTF( "Written Items = " );
+   DBG_PRINTF( "To =       [%s]", sWriteLayer.szTo );
+   DBG_PRINTF( "From =     [%s]", sWriteLayer.szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sWriteLayer.szSubject );
+   DBG_PRINTF( "Body =     [%s]", sWriteLayer.szBody );
+#endif 
+
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ARRAY_COUNT(asItems), &sReadLayer ) );
+
+#if XML_DEBUG
+   DBG_PRINTF( "Items = " );
+   DBG_PRINTF( "To =       [%s]", sReadLayer.szTo );
+   DBG_PRINTF( "From =     [%s]", sReadLayer.szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sReadLayer.szSubject );
+   DBG_PRINTF( "Body =     [%s]", sReadLayer.szBody );
+#endif 
+
+   RETURN_ON_FAIL( strcmp( sReadLayer.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+
+   // Success
+#undef TO
+#undef FROM
+#undef SUBJECT
+#undef BODY
+   return NO_ERROR;
+}
+
 ERROR_CODE XmlTest(void)
 {
    const char *pszFileName = "text.xml";
@@ -740,6 +893,7 @@ ERROR_CODE XmlTest(void)
    RETURN_ON_FAIL( xmlTestSubTableWithSiblingChild( pszFileName ) );
    RETURN_ON_FAIL( xmlTestSimpleArray( pszFileName ) );
    RETURN_ON_FAIL( xmlTestArrayWithSubTableAndSibling( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestWriteSimpleLayer( pszFileName ) );
 
 #undef PRINTF_TEST
    DBG_PRINTF( "All [%u] tests successfully passed", s_ulTestCount );
