@@ -239,7 +239,73 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
             return FAILED;
          }
          break;
-      
+      case XML_TABLE:
+         {
+            iRet = xmlTextWriterStartElement( pWriter, BAD_CAST pasItems[ulCount].pszElementName );
+            if( iRet >= 0 )
+            {
+               XML_ITEM *pasSubTable = ( XML_ITEM * )pasItems[ulCount].pavSubItem;
+               
+
+               for( uint32_t ulTableCount = 0; ulTableCount < pasItems[ulCount].ulArrayElements; ulTableCount++ )
+               {
+                  uint32_t ulOffset = pasItems[ulCount].ulMemberOffset + pasSubTable[ulTableCount].ulMemberOffset;
+
+                  iRet = xmlTextWriterWriteFormatElement(
+                  pWriter, 
+                  BAD_CAST pasSubTable[ulTableCount].pszElementName,
+                  "%s", 
+                  ( const char * )( pvInputStruct + ulOffset ) );
+                  if (iRet < 0) 
+                  {
+                     DBG_PRINTF( "testXmlwriterFilename: Error at xmlTextWriterWriteFormatElement" );
+                     return FAILED;
+                  }
+               }
+               iRet = xmlTextWriterEndElement( pWriter );
+            }
+            else
+            {
+               DBG_PRINTF( "Error Creating Node [%d]", iRet );
+               return FAILED;
+            }
+         }
+         break;
+
+      case XML_SUB_ARRAY:
+         {
+            for( uint32_t ulArrayIndex = 0; ulArrayIndex < pasItems[ulCount].ulArraySize; ulArrayIndex++ )
+            {
+               iRet = xmlTextWriterStartElement( pWriter, BAD_CAST pasItems[ulCount].pszElementName );
+               if( iRet >= 0 )
+               {
+                  XML_ITEM *pasTable = ( XML_ITEM * )pasItems[ulCount].pavSubItem;
+                  uint32_t ulStructOffset = pasItems[ulCount].ulMemberOffset;
+                  for( uint32_t ulIndex = 0; ulIndex < pasItems[ulCount].ulArrayElements; ulIndex++ )
+                  {
+                     uint32_t ulOffset = ulStructOffset + pasTable[ulIndex].ulMemberOffset + ( pasItems[ulCount].ulBufferSize / pasItems[ulCount].ulArraySize * ulArrayIndex );
+
+                     iRet = xmlTextWriterWriteFormatElement(
+                     pWriter, 
+                     BAD_CAST pasTable[ulIndex].pszElementName,
+                     "%s", 
+                     ( const char * )( pvInputStruct + ulOffset ) );
+                     if (iRet < 0) 
+                     {
+                        DBG_PRINTF( "testXmlwriterFilename: Error at xmlTextWriterWriteFormatElement" );
+                        return FAILED;
+                     }
+                  }
+                  iRet = xmlTextWriterEndElement( pWriter );
+               }
+               else
+               {
+                  DBG_PRINTF( "Unable to create element [%d]", iRet );
+                  return FAILED;
+               }
+            }
+         }
+         break;
 #if 0
 
     iRet = xmlTextWriterStartElement(pWriter, BAD_CAST "HEADER");
@@ -882,6 +948,286 @@ static ERROR_CODE xmlTestWriteSimpleLayer( const char *pszFileName )
    return NO_ERROR;
 }
 
+static ERROR_CODE xmlTestWriteSubTable( const char *pszFileName )
+{
+   typedef struct 
+   {
+      char szTo[8+1];
+      char szFrom[8+1];
+      char szSubject[16+1];
+      char szBody[64+1];
+   } SIMPLE_LAYER;
+   typedef struct 
+   {
+      SIMPLE_LAYER sLayer;
+   } SUBTABLE_LAYER;
+   
+   SUBTABLE_LAYER sWriteLayer = {0,}, sReadLayer = {0,};
+   const XML_ITEM asLayerItems[] =
+   {
+      XML_STR( "to", SIMPLE_LAYER, szTo ),
+      XML_STR( "from", SIMPLE_LAYER, szFrom ),
+      XML_STR( "subject", SIMPLE_LAYER, szSubject ),
+      XML_STR( "body", SIMPLE_LAYER, szBody )
+   };
+   const XML_ITEM asItems[] = 
+   {
+      XML_SUB_TABLE( "note", SUBTABLE_LAYER, sLayer, asLayerItems, ARRAY_COUNT( asLayerItems ) )
+   };
+
+#define TO        "Tove"
+#define FROM      "Jani"
+#define SUBJECT   "Reminder"
+#define BODY      "Don't forget about me"
+   // Copy elements
+
+   PRINTF_TEST( "Simple SubTable" );
+   Strcpy_safe( sWriteLayer.sLayer.szTo, TO, sizeof( sWriteLayer.sLayer.szTo ) );
+   Strcpy_safe( sWriteLayer.sLayer.szFrom, FROM, sizeof( sWriteLayer.sLayer.szFrom ) );
+   Strcpy_safe( sWriteLayer.sLayer.szSubject, SUBJECT, sizeof( sWriteLayer.sLayer.szSubject ) );
+   Strcpy_safe( sWriteLayer.sLayer.szBody, BODY, sizeof( sWriteLayer.sLayer.szBody ) );
+
+   // Write into file
+   RETURN_ON_FAIL( xmlWrapperWriteFile( pszFileName, asItems, ARRAY_COUNT(asItems), &sWriteLayer ) );
+#if XML_DEBUG
+   DBG_PRINTF( "Written Items = " );
+   DBG_PRINTF( "To =       [%s]", sWriteLayer.sLayer.szTo );
+   DBG_PRINTF( "From =     [%s]", sWriteLayer.sLayer.szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sWriteLayer.sLayer.szSubject );
+   DBG_PRINTF( "Body =     [%s]", sWriteLayer.sLayer.szBody );
+#endif 
+
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ARRAY_COUNT(asItems), &sReadLayer ) );
+
+#if XML_DEBUG
+   DBG_PRINTF( "Items = " );
+   DBG_PRINTF( "To =       [%s]", sReadLayer.sLayer.szTo );
+   DBG_PRINTF( "From =     [%s]", sReadLayer.sLayer.szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sReadLayer.sLayer.szSubject );
+   DBG_PRINTF( "Body =     [%s]", sReadLayer.sLayer.szBody );
+#endif 
+
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+
+   // Success
+#undef TO
+#undef FROM
+#undef SUBJECT
+#undef BODY
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE xmlTestWriteArray( const char *pszFileName )
+{
+   typedef struct 
+   {
+      char szTo[8+1];
+      char szFrom[8+1];
+      char szSubject[16+1];
+      char szBody[64+1];
+   } SIMPLE_LAYER;
+   typedef struct 
+   {
+      SIMPLE_LAYER asLayers[5];
+   } ARRAY_LAYER;
+   
+   ARRAY_LAYER sWriteLayer = {0,}, sReadLayer = {0,};
+   const XML_ITEM asArrayItems[] =
+   {
+      XML_STR( "to", SIMPLE_LAYER, szTo ),
+      XML_STR( "from", SIMPLE_LAYER, szFrom ),
+      XML_STR( "subject", SIMPLE_LAYER, szSubject ),
+      XML_STR( "body", SIMPLE_LAYER, szBody )
+   };
+   const XML_ITEM asItems[] = 
+   {
+      XML_ARRAY( "note", ARRAY_LAYER, asLayers, asArrayItems, ARRAY_COUNT( asArrayItems ), ARRAY_COUNT( sWriteLayer.asLayers ) )
+   };
+
+#define TO        "Tove"
+#define FROM      "Jani"
+#define SUBJECT   "Reminder"
+#define REPLY     "Re: Reminder"
+#define BODY      "Don't forget about me"
+#define RESPONSE  "I will not!"
+   // Copy elements
+
+   PRINTF_TEST( "Writing array" );
+   Strcpy_safe( sWriteLayer.asLayers[0].szTo, TO, sizeof( sWriteLayer.asLayers[0].szTo ) );
+   Strcpy_safe( sWriteLayer.asLayers[0].szFrom, FROM, sizeof( sWriteLayer.asLayers[0].szFrom ) );
+   Strcpy_safe( sWriteLayer.asLayers[0].szSubject, SUBJECT, sizeof( sWriteLayer.asLayers[0].szSubject ) );
+   Strcpy_safe( sWriteLayer.asLayers[0].szBody, BODY, sizeof( sWriteLayer.asLayers[0].szBody ) );
+   Strcpy_safe( sWriteLayer.asLayers[1].szTo, FROM, sizeof( sWriteLayer.asLayers[0].szTo ) );
+   Strcpy_safe( sWriteLayer.asLayers[1].szFrom, TO, sizeof( sWriteLayer.asLayers[0].szFrom ) );
+   Strcpy_safe( sWriteLayer.asLayers[1].szSubject, REPLY, sizeof( sWriteLayer.asLayers[0].szSubject ) );
+   Strcpy_safe( sWriteLayer.asLayers[1].szBody, RESPONSE, sizeof( sWriteLayer.asLayers[0].szBody ) );
+
+   // Write into file
+   RETURN_ON_FAIL( xmlWrapperWriteFile( pszFileName, asItems, ARRAY_COUNT(asItems), &sWriteLayer ) );
+#if XML_DEBUG
+   DBG_PRINTF( "Written Items = " );
+   DBG_PRINTF( "To =       [%s]", sWriteLayer.asLayers[0].szTo );
+   DBG_PRINTF( "From =     [%s]", sWriteLayer.asLayers[0].szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sWriteLayer.asLayers[0].szSubject );
+   DBG_PRINTF( "Body =     [%s]", sWriteLayer.asLayers[0].szBody );
+   DBG_PRINTF( "To =       [%s]", sWriteLayer.asLayers[1].szTo );
+   DBG_PRINTF( "From =     [%s]", sWriteLayer.asLayers[1].szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sWriteLayer.asLayers[1].szSubject );
+   DBG_PRINTF( "Body =     [%s]", sWriteLayer.asLayers[1].szBody );
+#endif 
+
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ARRAY_COUNT(asItems), &sReadLayer ) );
+
+#if XML_DEBUG
+   DBG_PRINTF( "Items = " );
+   DBG_PRINTF( "To =       [%s]", sReadLayer.asLayers[0].szTo );
+   DBG_PRINTF( "From =     [%s]", sReadLayer.asLayers[0].szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sReadLayer.asLayers[0].szSubject );
+   DBG_PRINTF( "Body =     [%s]", sReadLayer.asLayers[0].szBody );
+   DBG_PRINTF( "To =       [%s]", sReadLayer.asLayers[1].szTo );
+   DBG_PRINTF( "From =     [%s]", sReadLayer.asLayers[1].szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sReadLayer.asLayers[1].szSubject );
+   DBG_PRINTF( "Body =     [%s]", sReadLayer.asLayers[1].szBody );
+#endif 
+
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szTo, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szSubject, SUBJECT ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szTo, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szFrom, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szSubject, REPLY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szBody, RESPONSE ) == 0 ? NO_ERROR : FAILED );
+
+   // Success
+#undef TO
+#undef FROM
+#undef SUBJECT
+#undef REPLY
+#undef BODY
+#undef RESPONSE
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE xmlTestWrite( const char *pszFileName )
+{
+typedef struct 
+   {
+      char szTo[8+1];
+      char szFrom[8+1];
+      char szSubject[16+1];
+      char szBody[64+1];
+   } SIMPLE_LAYER;
+   typedef struct 
+   {
+      char szOne[16+1];
+      char szTwo[16+1];
+   } DATE_ARRAY;
+   typedef struct 
+   {
+      char szDetails[16+1];
+      SIMPLE_LAYER sLayer;
+      DATE_ARRAY asDates[3];
+   } WRITE_LAYER;
+   
+   WRITE_LAYER sWriteLayer = {0,}, sReadLayer = {0,};
+   const XML_ITEM asLayerItems[] =
+   {
+      XML_STR( "to", SIMPLE_LAYER, szTo ),
+      XML_STR( "from", SIMPLE_LAYER, szFrom ),
+      XML_STR( "subject", SIMPLE_LAYER, szSubject ),
+      XML_STR( "body", SIMPLE_LAYER, szBody )
+   };
+   const XML_ITEM asDateItems[]=
+   {
+      XML_STR( "one", DATE_ARRAY, szOne ),
+      XML_STR( "two", DATE_ARRAY, szTwo ),
+   };
+   const XML_ITEM asItems[] = 
+   {
+      XML_STR( "details", WRITE_LAYER, szDetails ),
+      XML_SUB_TABLE( "note", WRITE_LAYER, sLayer, asLayerItems, ARRAY_COUNT( asLayerItems ) ),
+      XML_ARRAY( "dates", WRITE_LAYER, asDates, asDateItems, ARRAY_COUNT( asDateItems ), ARRAY_COUNT( sWriteLayer.asDates ) )
+   };
+
+#define TO        "Tove"
+#define FROM      "Jani"
+#define SUBJECT   "Reminder"
+#define BODY      "Don't forget about me"
+#define DETAILS   "Test details"
+#define ONE       "ELEMENT ONE"
+#define TWO       "ELEMENT TWO"
+
+   // Copy elements
+
+   PRINTF_TEST( "Child String + SubTable + Arrays" );
+   Strcpy_safe( sWriteLayer.sLayer.szTo, TO, sizeof( sWriteLayer.sLayer.szTo ) );
+   Strcpy_safe( sWriteLayer.sLayer.szFrom, FROM, sizeof( sWriteLayer.sLayer.szFrom ) );
+   Strcpy_safe( sWriteLayer.sLayer.szSubject, SUBJECT, sizeof( sWriteLayer.sLayer.szSubject ) );
+   Strcpy_safe( sWriteLayer.sLayer.szBody, BODY, sizeof( sWriteLayer.sLayer.szBody ) );
+   Strcpy_safe( sWriteLayer.szDetails, DETAILS, sizeof( sWriteLayer.szDetails ) );
+   Strcpy_safe( sWriteLayer.asDates[0].szOne, ONE, sizeof( sWriteLayer.asDates[0].szOne ) );
+   Strcpy_safe( sWriteLayer.asDates[0].szTwo, TWO, sizeof( sWriteLayer.asDates[0].szTwo ) );
+   Strcpy_safe( sWriteLayer.asDates[1].szOne, TWO, sizeof( sWriteLayer.asDates[0].szOne ) );
+   Strcpy_safe( sWriteLayer.asDates[1].szTwo, ONE, sizeof( sWriteLayer.asDates[0].szTwo ) );
+
+   // Write into file
+   RETURN_ON_FAIL( xmlWrapperWriteFile( pszFileName, asItems, ARRAY_COUNT(asItems), &sWriteLayer ) );
+#if XML_DEBUG
+   DBG_PRINTF( "Written Items = " );
+   DBG_PRINTF( "To =       [%s]", sWriteLayer.sLayer.szTo );
+   DBG_PRINTF( "From =     [%s]", sWriteLayer.sLayer.szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sWriteLayer.sLayer.szSubject );
+   DBG_PRINTF( "Body =     [%s]", sWriteLayer.sLayer.szBody );
+   DBG_PRINTF( "Details =  [%s]", sWriteLayer.szDetails );
+   DBG_PRINTF( "One =      [%s]", sWriteLayer.asDates[0].szOne );
+   DBG_PRINTF( "Two =      [%s]", sWriteLayer.asDates[0].szTwo );
+   DBG_PRINTF( "One =      [%s]", sWriteLayer.asDates[1].szOne );
+   DBG_PRINTF( "Two =      [%s]", sWriteLayer.asDates[1].szTwo );
+#endif 
+
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, asItems, ARRAY_COUNT(asItems), &sReadLayer ) );
+
+#if XML_DEBUG
+   DBG_PRINTF( "Items = " );
+   DBG_PRINTF( "To =       [%s]", sReadLayer.sLayer.szTo );
+   DBG_PRINTF( "From =     [%s]", sReadLayer.sLayer.szFrom );
+   DBG_PRINTF( "Subject =  [%s]", sReadLayer.sLayer.szSubject );
+   DBG_PRINTF( "Body =     [%s]", sReadLayer.sLayer.szBody );
+   DBG_PRINTF( "Details =  [%s]", sReadLayer.szDetails );
+   DBG_PRINTF( "One =      [%s]", sReadLayer.asDates[0].szOne );
+   DBG_PRINTF( "Two =      [%s]", sReadLayer.asDates[0].szTwo );
+   DBG_PRINTF( "One =      [%s]", sReadLayer.asDates[1].szOne );
+   DBG_PRINTF( "Two =      [%s]", sReadLayer.asDates[1].szTwo );
+#endif 
+
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szTo, TO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szDetails, DETAILS ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[0].szOne, ONE ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[0].szTwo, TWO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[1].szOne, TWO ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[1].szTwo, ONE ) == 0 ? NO_ERROR : FAILED );
+
+   // Success
+#undef TO
+#undef FROM
+#undef SUBJECT
+#undef BODY
+#undef DETAILS
+#undef ONE
+#undef TWO
+
+   return NO_ERROR;
+}
+
 ERROR_CODE XmlTest(void)
 {
    const char *pszFileName = "text.xml";
@@ -894,6 +1240,9 @@ ERROR_CODE XmlTest(void)
    RETURN_ON_FAIL( xmlTestSimpleArray( pszFileName ) );
    RETURN_ON_FAIL( xmlTestArrayWithSubTableAndSibling( pszFileName ) );
    RETURN_ON_FAIL( xmlTestWriteSimpleLayer( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestWriteSubTable( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestWriteArray( pszFileName ) );
+   RETURN_ON_FAIL( xmlTestWrite( pszFileName ) );
 
 #undef PRINTF_TEST
    DBG_PRINTF( "All [%u] tests successfully passed", s_ulTestCount );

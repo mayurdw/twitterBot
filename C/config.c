@@ -117,7 +117,5 @@ static ERROR_CODE Config_Reset(void)
 
 static ERROR_CODE WriteConfig( const BOT_CONFIG *psBotConfig )
 {
-   // TODO: Write config
-
-   return NO_ERROR;
+   return xmlWrapperWriteFile( CONFIG_FILENAME, s_apsConfigKeys, ARRAY_COUNT( s_apsConfigKeys ), &s_sBotConfig );
 }

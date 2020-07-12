@@ -36,6 +36,7 @@ ERROR_CODE Database_Init( void )
       RETURN_ON_FAIL( Config_GetRssFilename( szRSSfeedFile, sizeof( szRSSfeedFile ) ) );
 
       eRet = ReadFeedXmlFile( szRSSfeedFile );
+      // Create Database file
    }
 
    return eRet;

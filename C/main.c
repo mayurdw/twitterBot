@@ -31,15 +31,15 @@ int main()
 
    RETURN_ON_FAIL( XmlTest() );
 
-   // RETURN_ON_FAIL( Config_Init() );
+    RETURN_ON_FAIL( Config_Init() );
 
-   // if( IsNewFileRequired() )
-   // {
-   //    DBG_PRINTF( "Downloading new feed file" );
-   //    RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
-   //    RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
-   // }
-
-   // RETURN_ON_FAIL( Database_Init( ) );
+   if( IsNewFileRequired() )
+   {
+      DBG_PRINTF( "Downloading new feed file" );
+      RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
+       RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
+   }
+   
+   RETURN_ON_FAIL( Database_Init( ) );
    return( 0 );
 }
