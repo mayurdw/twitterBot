@@ -14,9 +14,10 @@ typedef struct
     char szTitle[128 + 1];
     char szLink[128 + 1];
     // non-xml variable
-    int iNumOfTimesShared;
+    char szTimesShared[2 + 1];
 } BLOG_POST;
 
 ERROR_CODE Database_Init(void);
+ERROR_CODE Database_GetUnsharedPost(BLOG_POST *psPost);
 
 #endif
