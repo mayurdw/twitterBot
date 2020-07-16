@@ -18,6 +18,6 @@ typedef struct
 } BLOG_POST;
 
 ERROR_CODE Database_Init(void);
-ERROR_CODE Database_GetUnsharedPost(BLOG_POST *psPost);
-
+ERROR_CODE Database_GetOldestLeastSharedPost(BLOG_POST *psPost);
+ERROR_CODE Database_Tests(void);
 #endif
