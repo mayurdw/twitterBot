@@ -20,4 +20,7 @@ typedef struct
 ERROR_CODE Database_Init(void);
 ERROR_CODE Database_GetOldestLeastSharedPost(BLOG_POST *psPost);
 ERROR_CODE Database_Tests(void);
+ERROR_CODE Database_AddNewItem(const BLOG_POST *psPost);
+bool Database_IsUniquePost(const BLOG_POST *psPost);
+
 #endif

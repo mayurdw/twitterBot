@@ -131,7 +131,6 @@ ERROR_CODE Database_GetOldestLeastSharedPost(BLOG_POST * psPost)
    uint32_t ulOldestCount = UINT32_MAX, ulIndexFound = UINT32_MAX;
    ERROR_CODE eRet = NO_ERROR;
 
-   // TODO: Find the oldest least shared post
    RETURN_ON_NULL( psPost );
    memset( psPost, 0, sizeof( BLOG_POST ) );
 
@@ -162,6 +161,29 @@ ERROR_CODE Database_GetOldestLeastSharedPost(BLOG_POST * psPost)
    return eRet;
 }
 
+bool Database_IsUniquePost( const BLOG_POST *psPost )
+{
+   bool bIsUnique = false;
+   
+   if( _null_ == psPost )
+   {
+#if DEBUG_DATABASE
+      DBG_PRINTF( "psPost is null, returning false" );
+#endif
+      return bIsUnique;
+   }
+
+   return bIsUnique; 
+}
+
+ERROR_CODE Database_AddNewItem( const BLOG_POST *psPost )
+{
+   return NO_ERROR;
+}
+
+
+////////////////////////////////////////////////////////////////////////////
+
 
 static uint32_t s_ulTestCount = 0;
 
@@ -180,6 +202,7 @@ static ERROR_CODE Database_SanityTest( void )
    memset( &s_sList, 0, sizeof( s_sList ) );
    RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
    RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( &sPost ) == NOT_FOUND ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( Database_IsUniquePost( _null_ ) == false ? NO_ERROR : FAILED );
 
    return NO_ERROR;
 }
@@ -205,10 +228,51 @@ static ERROR_CODE Database_SimpleComparison( void )
    return NO_ERROR;
 }
 
+static ERROR_CODE Database_OldestPostTest()
+{
+   BLOG_POST sPost = {0, };
+
+   PRINTF_TEST( "Should return oldest post in the list" );
+   memset( &s_sList, 0, sizeof( s_sList ) );
+   
+   Strcpy_safe( s_sList.asList[0].szLink, "LINK 1", sizeof( s_sList.asList[0].szLink ) );
+   Strcpy_safe( s_sList.asList[0].szTitle, "TITLE 1", sizeof( s_sList.asList[0].szTitle ) );
+   Strcpy_safe( s_sList.asList[0].szTimesShared, "10", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.asList[1].szLink, "LINK 2", sizeof( s_sList.asList[1].szLink ) );
+   Strcpy_safe( s_sList.asList[1].szTitle, "TITLE 2", sizeof( s_sList.asList[1].szTitle ) );
+   Strcpy_safe( s_sList.asList[1].szTimesShared, "1", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.asList[2].szLink, "LINK 3", sizeof( s_sList.asList[2].szLink ) );
+   Strcpy_safe( s_sList.asList[2].szTitle, "TITLE 3", sizeof( s_sList.asList[2].szTitle ) );
+   Strcpy_safe( s_sList.asList[2].szTimesShared, "1", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.szPostCount, "3", sizeof( s_sList.szPostCount ) );
+
+   RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( &sPost ) );
+
+   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[2], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : FAILED );
+
+   memset( &s_sList, 0, sizeof( s_sList ) );
+}
+
+static ERROR_CODE Database_IsUniqueSimpleTest( void )
+{
+   BLOG_POST sPost = { "Unique Title", "Unique Link", "0" };
+
+   PRINTF_TEST( "Simple unique test" );
+   memset( &s_sList, 0, sizeof( s_sList ) );
+
+   RETURN_ON_FAIL( Database_IsUniquePost( &sPost ) == true ? NO_ERROR : FAILED );
+
+   memset( &s_sList, 0, sizeof( s_sList ) );
+
+   return NO_ERROR;
+}
+
 ERROR_CODE Database_Tests( void )
 {
    RETURN_ON_FAIL( Database_SanityTest() );
    RETURN_ON_FAIL( Database_SimpleComparison() );
+   RETURN_ON_FAIL( Database_OldestPostTest() );
+   RETURN_ON_FAIL( Database_IsUniqueSimpleTest() );
 
    DBG_PRINTF( "------------- %s: [%u] Tests passed -------------", __func__, s_ulTestCount );
 

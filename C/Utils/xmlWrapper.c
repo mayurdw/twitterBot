@@ -158,14 +158,17 @@ ERROR_CODE xmlWrapperParseFile( const char *pszFileName, const XML_ITEM *pasItem
                      {
                         xmlChar *pData = xmlNodeListGetString( pDoc, nodeset->nodeTab[i]->xmlChildrenNode, 1 );
                         uint32_t ulOffset = pasItems[ulCount].ulMemberOffset + pasTable[ulIndex].ulMemberOffset + ( ulSingleIndexSize * i );
+                        if( _null_ != pData )
+                        {
 #if XML_DEBUG
-                        DBG_PRINTF( "String found: [%s]", pData );
+                           DBG_PRINTF( "String found: [%s]", pData );
 #endif
-                        Strcpy_safe( 
-                        ( pvOutputStruct + ulOffset ), 
-                        pData, 
-                        pasTable[ulIndex].ulBufferSize );
-                        xmlFree( pData );
+                           Strcpy_safe( 
+                           ( pvOutputStruct + ulOffset ), 
+                           pData, 
+                           pasTable[ulIndex].ulBufferSize );
+                           xmlFree( pData );
+                        }
                      }
                   }
                   
