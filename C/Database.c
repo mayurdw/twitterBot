@@ -164,14 +164,34 @@ ERROR_CODE Database_GetOldestLeastSharedPost(BLOG_POST * psPost)
 bool Database_IsUniquePost( const BLOG_POST *psPost )
 {
    bool bIsUnique = false;
-   
+
    if( _null_ == psPost )
    {
-#if DEBUG_DATABASE
-      DBG_PRINTF( "psPost is null, returning false" );
+#if DATABASE_DEBUG
+      DBG_PRINTF( "psPost is NULL, returned false" );
 #endif
-      return bIsUnique;
    }
+   else
+   {
+      uint32_t ulCount = atol( s_sList.szPostCount );
+      if( ulCount == 0 )
+      {
+         bIsUnique = true;
+      }
+      else
+      {
+         bool bFound = false;
+
+         for( uint32_t x = 0; ( x < ulCount && !bFound ); x++ )
+         {
+            bFound = memcmp( psPost, &s_sList.asList[x], sizeof( BLOG_POST ) ) == 0;
+         }
+
+         bIsUnique = !bFound;
+      }
+      
+   }
+   
 
    return bIsUnique; 
 }
@@ -256,23 +276,77 @@ static ERROR_CODE Database_OldestPostTest()
 static ERROR_CODE Database_IsUniqueSimpleTest( void )
 {
    BLOG_POST sPost = { "Unique Title", "Unique Link", "0" };
+   bool bRet = false;
 
    PRINTF_TEST( "Simple unique test" );
    memset( &s_sList, 0, sizeof( s_sList ) );
 
-   RETURN_ON_FAIL( Database_IsUniquePost( &sPost ) == true ? NO_ERROR : FAILED );
+   bRet = Database_IsUniquePost( &sPost );
+   RETURN_ON_FAIL( bRet ? NO_ERROR : FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
 
    return NO_ERROR;
 }
 
+static ERROR_CODE Database_IsUniqueFilledDatabase( void )
+{
+   bool bRet = false;
+   BLOG_POST sPost = { "UNIQUE TITLE", "UNIQUE LINK", "0" };
+
+   PRINTF_TEST( "Filled Database Unique test" );
+   memset( &s_sList, 0, sizeof( s_sList ) );
+   Strcpy_safe( s_sList.asList[0].szLink, "LINK 1", sizeof( s_sList.asList[0].szLink ) );
+   Strcpy_safe( s_sList.asList[0].szTitle, "TITLE 1", sizeof( s_sList.asList[0].szTitle ) );
+   Strcpy_safe( s_sList.asList[0].szTimesShared, "10", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.asList[1].szLink, "LINK 2", sizeof( s_sList.asList[1].szLink ) );
+   Strcpy_safe( s_sList.asList[1].szTitle, "TITLE 2", sizeof( s_sList.asList[1].szTitle ) );
+   Strcpy_safe( s_sList.asList[1].szTimesShared, "1", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.asList[2].szLink, "LINK 3", sizeof( s_sList.asList[2].szLink ) );
+   Strcpy_safe( s_sList.asList[2].szTitle, "TITLE 3", sizeof( s_sList.asList[2].szTitle ) );
+   Strcpy_safe( s_sList.asList[2].szTimesShared, "1", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.szPostCount, "3", sizeof( s_sList.szPostCount ) );
+
+   memset( &s_sList, 0, sizeof( s_sList ) );
+   bRet = Database_IsUniquePost( &sPost );
+   RETURN_ON_FAIL( bRet ? NO_ERROR : FAILED );
+
+   return NO_ERROR;
+}
+
+static ERROR_CODE Database_IsNotUniqueFilledDatabase( void )
+{
+   bool bRet = false;
+   BLOG_POST sPost = { "TITLE 3", "LINK 3", "1" };
+
+   PRINTF_TEST( "Filled Database Not Unique test" );
+   memset( &s_sList, 0, sizeof( s_sList ) );
+   Strcpy_safe( s_sList.asList[0].szLink, "LINK 1", sizeof( s_sList.asList[0].szLink ) );
+   Strcpy_safe( s_sList.asList[0].szTitle, "TITLE 1", sizeof( s_sList.asList[0].szTitle ) );
+   Strcpy_safe( s_sList.asList[0].szTimesShared, "10", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.asList[1].szLink, "LINK 2", sizeof( s_sList.asList[1].szLink ) );
+   Strcpy_safe( s_sList.asList[1].szTitle, "TITLE 2", sizeof( s_sList.asList[1].szTitle ) );
+   Strcpy_safe( s_sList.asList[1].szTimesShared, "1", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.asList[2].szLink, "LINK 3", sizeof( s_sList.asList[2].szLink ) );
+   Strcpy_safe( s_sList.asList[2].szTitle, "TITLE 3", sizeof( s_sList.asList[2].szTitle ) );
+   Strcpy_safe( s_sList.asList[2].szTimesShared, "1", sizeof( s_sList.asList[0].szTimesShared ) );
+   Strcpy_safe( s_sList.szPostCount, "3", sizeof( s_sList.szPostCount ) );
+
+   bRet = Database_IsUniquePost( &sPost );
+   
+   memset( &s_sList, 0, sizeof( s_sList ) );
+   RETURN_ON_FAIL( !bRet ? NO_ERROR : FAILED );
+
+   return NO_ERROR;
+}
 ERROR_CODE Database_Tests( void )
 {
    RETURN_ON_FAIL( Database_SanityTest() );
    RETURN_ON_FAIL( Database_SimpleComparison() );
    RETURN_ON_FAIL( Database_OldestPostTest() );
    RETURN_ON_FAIL( Database_IsUniqueSimpleTest() );
+   RETURN_ON_FAIL( Database_IsUniqueFilledDatabase() );
+   RETURN_ON_FAIL( Database_IsNotUniqueFilledDatabase() );
 
    DBG_PRINTF( "------------- %s: [%u] Tests passed -------------", __func__, s_ulTestCount );
 
