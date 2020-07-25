@@ -21,6 +21,7 @@ typedef enum
     CONFIG_VALIDATION_ERROR,
     NOT_FOUND,
     FAILED,
+    OVERFLOW,
 } ERROR_CODE;
 
 #define _null_ 0

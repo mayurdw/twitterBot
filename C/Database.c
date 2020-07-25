@@ -202,6 +202,7 @@ ERROR_CODE Database_AddNewItem( const BLOG_POST *psPost )
 
    RETURN_ON_NULL( psPost );
    UTIL_ASSERT( ( strlen( psPost->szLink ) > 0 && strlen( psPost->szTitle ) > 0 ), INVALID_ARG );
+   UTIL_ASSERT( ( ARRAY_COUNT( s_sList.asList ) > ( ulCount + 1 ) ), OVERFLOW );
 
    if( ulCount == 0 )
    {
@@ -209,9 +210,13 @@ ERROR_CODE Database_AddNewItem( const BLOG_POST *psPost )
    }
    else
    {
-      memcpy( &s_sList.asList[1], &s_sList.asList[0], ( sizeof( BLOG_POST ) * ulCount ) );
+      const uint32_t ulCopySize = sizeof( s_sList.asList ) - sizeof ( BLOG_POST );
+
+      memmove( &s_sList.asList[1], &s_sList.asList[0], ulCopySize );
       memcpy( &s_sList.asList[0], psPost, sizeof( BLOG_POST ) );
    }
+
+   snprintf( s_sList.szPostCount, sizeof( s_sList.szPostCount ), "%u", ulCount + 1 );
    
    return NO_ERROR;
 }
@@ -366,6 +371,7 @@ static ERROR_CODE Database_AddSimpleItem( void )
 
    RETURN_ON_FAIL( Database_AddNewItem( &sPost ) );
    RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[0], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, "1" ) == 0 ? NO_ERROR : FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
    return NO_ERROR;
@@ -378,7 +384,6 @@ static ERROR_CODE Database_AddItemToFilledDatabase( void )
    PRINTF_TEST( "Testing adding item on a filled database" );
    memset( &s_sList, 0, sizeof( s_sList ) );
 
-   RETURN_ON_FAIL( Database_AddNewItem( &sPost ) );
    Strcpy_safe( s_sList.asList[0].szLink, "LINK 1", sizeof( s_sList.asList[0].szLink ) );
    Strcpy_safe( s_sList.asList[0].szTitle, "TITLE 1", sizeof( s_sList.asList[0].szTitle ) );
    Strcpy_safe( s_sList.asList[0].szTimesShared, "10", sizeof( s_sList.asList[0].szTimesShared ) );
@@ -389,9 +394,40 @@ static ERROR_CODE Database_AddItemToFilledDatabase( void )
    Strcpy_safe( s_sList.asList[2].szTitle, "TITLE 3", sizeof( s_sList.asList[2].szTitle ) );
    Strcpy_safe( s_sList.asList[2].szTimesShared, "1", sizeof( s_sList.asList[0].szTimesShared ) );
    Strcpy_safe( s_sList.szPostCount, "3", sizeof( s_sList.szPostCount ) );
+
+   RETURN_ON_FAIL( Database_AddNewItem( &sPost ) );
    RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[0], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, "4" ) == 0 ? NO_ERROR : FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
+   return NO_ERROR;
+}
+
+static ERROR_CODE Database_AddItemDatabaseFull() 
+{
+   BLOG_POST sPost = { "UNIQUE TITLE", "UNIQUE TEST", "0" };
+   char szTemp[32 + 1] = { 0, };
+   const uint32_t ulCount = ARRAY_COUNT( s_sList.asList );
+
+   PRINTF_TEST( "Add Item: Database is full" );
+
+   memset( &s_sList, 0, sizeof( s_sList ) );
+
+   for( uint32_t x = 0; x < ulCount; x++ )
+   {
+      snprintf( szTemp, sizeof( szTemp ), "TITLE %u", x );
+      Strcpy_safe( s_sList.asList[x].szTitle, szTemp, sizeof( s_sList.asList[x].szTitle ) );
+      snprintf( szTemp, sizeof( szTemp ), "LINK %u", x );
+      Strcpy_safe( s_sList.asList[x].szLink, szTemp, sizeof( s_sList.asList[x].szLink ) );
+   }
+   snprintf( szTemp, sizeof( szTemp ), "%u", ulCount );
+   Strcpy_safe( s_sList.szPostCount, szTemp, sizeof( s_sList.szPostCount ) );
+
+   RETURN_ON_FAIL( Database_AddNewItem( &sPost ) == OVERFLOW ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, szTemp ) == 0 ? NO_ERROR : FAILED );
+
+   memset( &s_sList, 0, sizeof( s_sList ) );
+   
    return NO_ERROR;
 }
 
@@ -406,7 +442,8 @@ ERROR_CODE Database_Tests( void )
    RETURN_ON_FAIL( Database_IsUniqueFilledDatabase() );
    RETURN_ON_FAIL( Database_IsNotUniqueFilledDatabase() );
    RETURN_ON_FAIL( Database_AddSimpleItem() );
-   //RETURN_ON_FAIL( Database_AddItemToFilledDatabase() );
+   RETURN_ON_FAIL( Database_AddItemToFilledDatabase() );
+   RETURN_ON_FAIL( Database_AddItemDatabaseFull() );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
    DBG_PRINTF( "------------- %s: [%u] Tests passed -------------", __func__, s_ulTestCount );
