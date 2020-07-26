@@ -339,7 +339,7 @@ static ERROR_CODE Database_IsUniqueFilledDatabase( void )
 static ERROR_CODE Database_IsNotUniqueFilledDatabase( void )
 {
    bool bRet = false;
-   BLOG_POST sPost = { "TITLE 3", "LINK 3", "1" };
+   BLOG_POST sPost = { "TITLE 2", "LINK 2", "1" };
 
    PRINTF_TEST( "Filled Database Not Unique test" );
    memset( &s_sList, 0, sizeof( s_sList ) );
