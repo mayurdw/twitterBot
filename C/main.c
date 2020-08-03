@@ -25,6 +25,27 @@
 // It will give us a post
 
 
+static ERROR_CODE readyPostForPublishing()
+{
+   BLOG_POST sPost = {0, };
+   char szDaysUntilUpdate[2 + 1] = {0, };
+   uint32_t ulDays = 0;
+
+   RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( &sPost ) );
+   RETURN_ON_FAIL( Config_GetDaysUntilUpdate( szDaysUntilUpdate, sizeof( szDaysUntilUpdate ) ) );
+
+   ulDays = atol( szDaysUntilUpdate );
+   ulDays--;
+   snprintf( szDaysUntilUpdate, sizeof( szDaysUntilUpdate ), "%u", ulDays );
+   RETURN_ON_FAIL( Config_SetDaysUntilUpdate( szDaysUntilUpdate ) );
+
+   DBG_PRINTF( "Oldest Post is: " );
+   DBG_PRINTF( "Title = [%s]", sPost.szTitle );
+   DBG_PRINTF( "Link  = [%s]", sPost.szLink );
+
+   return NO_ERROR;
+}
+
 int main()
 {
    DBG_INIT();
@@ -40,10 +61,12 @@ int main()
    {
       DBG_PRINTF( "Downloading new feed file" );
       RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
-       RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
+      RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
    }
    
    RETURN_ON_FAIL( Database_Init( ) );
+
+   RETURN_ON_FAIL( readyPostForPublishing() );
    
    return( 0 );
 }

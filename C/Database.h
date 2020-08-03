@@ -58,6 +58,15 @@ ERROR_CODE Database_AddNewItem(const BLOG_POST *psPost);
  */
 bool Database_IsUniquePost(const BLOG_POST *psPost);
 
+/*
+    Updates a post which is already on the database.
+    @param (INPUT):     psPost      -> Blog Post which needs to be updated
+    @return:            NO_ERROR    -> Success
+    @return:            INVALID_ARG -> psPost is invalid
+    @return:            OVERFLOW    -> Database is full, need to expand the count
+*/
+ERROR_CODE Database_UpdatePost( const BLOG_POST *psPost );
+
 /* 
     Database Unit Tests
     @param:             NONE
