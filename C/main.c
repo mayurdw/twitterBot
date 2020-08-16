@@ -10,7 +10,7 @@
 
 #define BLOG_FEED_URL            ( "https://itsmayurremember.wordpress.com/feed" )
 #define DAYS_UNTIL_NEXT_UPDATE   ( "14" )
-#define PERFORM_TESTS            ( 0 )
+#define PERFORM_TESTS            ( 1 )
 // Static Functions
 
 // Application flow:
@@ -50,12 +50,12 @@ int main()
 {
    DBG_INIT();
 
-#if PERFORM_TEST
+#if PERFORM_TESTS
    RETURN_ON_FAIL( XmlTest() );
    RETURN_ON_FAIL( Database_Tests() );
 #endif
 
-   RETURN_ON_FAIL( Config_Init() );
+   /* RETURN_ON_FAIL( Config_Init() );
 
    if( IsNewFileRequired() )
    {
@@ -66,7 +66,7 @@ int main()
    
    RETURN_ON_FAIL( Database_Init( ) );
 
-   RETURN_ON_FAIL( readyPostForPublishing() );
+   RETURN_ON_FAIL( readyPostForPublishing() ); */
    
    return( 0 );
 }
