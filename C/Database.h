@@ -65,7 +65,7 @@ bool Database_IsUniquePost(const BLOG_POST *psPost);
     @return:            INVALID_ARG -> psPost is invalid
     @return:            OVERFLOW    -> Database is full, need to expand the count
 */
-ERROR_CODE Database_UpdatePost( const BLOG_POST *psPost );
+ERROR_CODE Database_UpdateTimesShared( const BLOG_POST *psPost );
 
 /* 
     Database Unit Tests

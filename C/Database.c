@@ -9,7 +9,7 @@
 // Macros
 #define MAX_BLOG_POSTS  ( 200 )
 #define DATABASE_FILE   ( "database.xml" )
-#define DEBUG_DATABASE  ( 1 )
+#define DEBUG_DATABASE  ( 0 )
 
 // typedefs 
 typedef struct DATABASE
@@ -180,7 +180,7 @@ static ERROR_CODE Database_FindIndex( const BLOG_POST *psPost, int32_t *plIndex 
    UTIL_ASSERT( ( strlen( psPost->szTitle ) > 0 && strlen( psPost->szLink ) > 0 ), INVALID_ARG );
    *plIndex = -1;
 
-   if( ulCount == 0 )
+   if( ulCount > 0 )
    {
       bool bFound = false;
       uint32_t x = 0;
@@ -190,7 +190,7 @@ static ERROR_CODE Database_FindIndex( const BLOG_POST *psPost, int32_t *plIndex 
          bFound = memcmp( psPost, &s_sList.asList[x], sizeof( BLOG_POST ) ) == 0;
       }
 
-      *plIndex = bFound ? ( int32_t )x : -1;
+      *plIndex = bFound ? ( int32_t )--x : -1;
    }
 
    return NO_ERROR;
@@ -203,7 +203,7 @@ bool Database_IsUniquePost( const BLOG_POST *psPost )
 
    if( _null_ == psPost )
    {
-#if DATABASE_DEBUG
+#if DEBUG_DATABASE
       DBG_PRINTF( "psPost is NULL, returned false" );
 #endif
    }
@@ -244,7 +244,7 @@ ERROR_CODE Database_AddNewItem( const BLOG_POST *psPost )
    return NO_ERROR;
 }
 
-ERROR_CODE Database_UpdatePost( const BLOG_POST *psPost )
+ERROR_CODE Database_UpdateTimesShared( const BLOG_POST *psPost )
 {
    int32_t lIndex = -1;
 
@@ -254,7 +254,11 @@ ERROR_CODE Database_UpdatePost( const BLOG_POST *psPost )
    RETURN_ON_FAIL( Database_FindIndex( psPost, &lIndex ) );
    if( lIndex >= 0 )
    {
-      s_sList.asList[lIndex] = *psPost;
+      uint32_t ulCurrentCount = atol( s_sList.asList[lIndex].szTimesShared );
+
+      ulCurrentCount++;
+      snprintf( s_sList.asList[lIndex].szTimesShared, sizeof( s_sList.asList[lIndex].szTimesShared), 
+      "%u", ulCurrentCount );
    }
 
    return NO_ERROR;
@@ -283,8 +287,8 @@ static ERROR_CODE Database_SanityTest( void )
    RETURN_ON_FAIL( Database_IsUniquePost( _null_ ) == false ? NO_ERROR : FAILED );
    RETURN_ON_FAIL( Database_AddNewItem( _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
    RETURN_ON_FAIL( Database_AddNewItem( &sPost ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( Database_UpdatePost( _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( Database_UpdatePost( &sPost ) == INVALID_ARG ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( Database_UpdateTimesShared( _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( Database_UpdateTimesShared( &sPost ) == INVALID_ARG ? NO_ERROR : FAILED );
 
    return NO_ERROR;
 }
@@ -477,7 +481,7 @@ static ERROR_CODE Database_UpdatePostSimpleTest()
 #define LINK  "TEST LINK"
 #define TIME  "1"
 
-   BLOG_POST sPost = { TITLE, LINK, "1" };
+   BLOG_POST sPost = { TITLE, LINK, "0" };
 
    PRINTF_TEST( "Simple update post test" );
    memset( &s_sList, 0, sizeof( s_sList ) );
@@ -487,7 +491,7 @@ static ERROR_CODE Database_UpdatePostSimpleTest()
    Strcpy_safe( s_sList.asList[0].szTimesShared, "0", sizeof( s_sList.asList[0].szTimesShared ) );
    Strcpy_safe( s_sList.szPostCount, "1", sizeof( s_sList.szPostCount ) );
 
-   RETURN_ON_FAIL( Database_UpdatePost( &sPost ) );
+   RETURN_ON_FAIL( Database_UpdateTimesShared( &sPost ) );
 
 #if DEBUG_DATABASE
    DBG_PRINTF( "EXPECTED = " );
@@ -500,7 +504,7 @@ static ERROR_CODE Database_UpdatePostSimpleTest()
    DBG_PRINTF( "TIMES = [%s]", s_sList.asList[0].szTimesShared );
 #endif
 
-   RETURN_ON_FAIL( ( memcmp( &sPost, &s_sList.asList[0], sizeof( BLOG_POST ) == 0 ) ? NO_ERROR : FAILED ) );
+   RETURN_ON_FAIL( ( strcmp( s_sList.asList[0].szTimesShared, TIME ) == 0 ? NO_ERROR : FAILED ) );
 
 #undef TITLE
 #undef LINK
