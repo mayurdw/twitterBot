@@ -10,7 +10,7 @@
 
 #define BLOG_FEED_URL            ( "https://itsmayurremember.wordpress.com/feed" )
 #define DAYS_UNTIL_NEXT_UPDATE   ( "14" )
-#define PERFORM_TESTS            ( 1 )
+#define PERFORM_TESTS            ( 0 )
 // Static Functions
 
 // Application flow:
@@ -38,10 +38,15 @@ static ERROR_CODE readyPostForPublishing()
    ulDays--;
    snprintf( szDaysUntilUpdate, sizeof( szDaysUntilUpdate ), "%u", ulDays );
    RETURN_ON_FAIL( Config_SetDaysUntilUpdate( szDaysUntilUpdate ) );
+   RETURN_ON_FAIL( Database_UpdateTimesShared( &sPost ) );
 
    DBG_PRINTF( "Oldest Post is: " );
    DBG_PRINTF( "Title = [%s]", sPost.szTitle );
    DBG_PRINTF( "Link  = [%s]", sPost.szLink );
+
+   DBG_PRINTF( "Tweet Text = " );
+   DBG_PRINTF( "From the archives of my blog: '%s'\n\n%s", sPost.szTitle, sPost.szLink );
+   
 
    return NO_ERROR;
 }
@@ -55,7 +60,7 @@ int main()
    RETURN_ON_FAIL( Database_Tests() );
 #endif
 
-   /* RETURN_ON_FAIL( Config_Init() );
+   RETURN_ON_FAIL( Config_Init() );
 
    if( IsNewFileRequired() )
    {
@@ -66,7 +71,7 @@ int main()
    
    RETURN_ON_FAIL( Database_Init( ) );
 
-   RETURN_ON_FAIL( readyPostForPublishing() ); */
+   RETURN_ON_FAIL( readyPostForPublishing() );
    
    return( 0 );
 }

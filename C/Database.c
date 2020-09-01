@@ -261,6 +261,8 @@ ERROR_CODE Database_UpdateTimesShared( const BLOG_POST *psPost )
       "%u", ulCurrentCount );
    }
 
+   RETURN_ON_FAIL( CreateDatabaseFile() );
+
    return NO_ERROR;
 }
 
