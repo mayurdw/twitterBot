@@ -20,7 +20,7 @@ ERROR_CODE Strcpy_safe( char* pszDest, const char* pszSrc, uint32_t ulBufferSize
    if( ulBufferSize < ( strlen( pszSrc ) + 1 ) )
    {
       ulCopySize = ulBufferSize - 1;
-      printf( "Destination size is %d, source is %lu. Truncating\n", ulBufferSize, strlen( pszSrc ) );
+      DBG_PRINTF( "Destination size is %d, source is %lu. Truncating", ulBufferSize, strlen( pszSrc ) );
    }
    else
    {

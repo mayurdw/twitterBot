@@ -206,13 +206,13 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
    pWriter = xmlNewTextWriterFilename(pszFileName, 0);
    if (pWriter == NULL) {
       DBG_PRINTF("Error creating the xml pWriter = [%d]", iRet );
-      return FAILED;
+      return TEST_FAILED;
    }
 
    iRet = xmlTextWriterStartDocument(pWriter, NULL, MY_ENCODING, NULL);
    if (iRet < 0) {
       DBG_PRINTF( "testXmlwriterFilename: Error at xmlTextWriterStartDocument" );
-      return FAILED;
+      return TEST_FAILED;
    }
 
    // Parent element
@@ -221,7 +221,7 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
       BAD_CAST "root" );
    if (iRet < 0) {
       DBG_PRINTF("testXmlwriterFilename: Error at xmlTextWriterStartElement");
-      return FAILED;
+      return TEST_FAILED;
    }
 
 
@@ -239,7 +239,7 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
          if (iRet < 0) 
          {
             DBG_PRINTF( "testXmlwriterFilename: Error at xmlTextWriterWriteFormatElement" );
-            return FAILED;
+            return TEST_FAILED;
          }
          break;
       case XML_TABLE:
@@ -262,7 +262,7 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
                   if (iRet < 0) 
                   {
                      DBG_PRINTF( "testXmlwriterFilename: Error at xmlTextWriterWriteFormatElement" );
-                     return FAILED;
+                     return TEST_FAILED;
                   }
                }
                iRet = xmlTextWriterEndElement( pWriter );
@@ -270,7 +270,7 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
             else
             {
                DBG_PRINTF( "Error Creating Node [%d]", iRet );
-               return FAILED;
+               return TEST_FAILED;
             }
          }
          break;
@@ -296,7 +296,7 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
                      if (iRet < 0) 
                      {
                         DBG_PRINTF( "testXmlwriterFilename: Error at xmlTextWriterWriteFormatElement" );
-                        return FAILED;
+                        return TEST_FAILED;
                      }
                   }
                   iRet = xmlTextWriterEndElement( pWriter );
@@ -304,7 +304,7 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
                else
                {
                   DBG_PRINTF( "Unable to create element [%d]", iRet );
-                  return FAILED;
+                  return TEST_FAILED;
                }
             }
          }
@@ -339,7 +339,7 @@ ERROR_CODE xmlWrapperWriteFile( const char *pszFileName, const XML_ITEM *pasItem
     if (iRet < 0) {
         DBG_PRINTF
             ("testXmlwriterFilename: Error at xmlTextWriterEndDocument");
-        return FAILED;
+        return TEST_FAILED;
     }
 
     xmlFreeTextWriter(pWriter);
@@ -363,11 +363,11 @@ static ERROR_CODE xmlTestSanityTest( const char *pszFileName )
    EMPTY_STRUCT sTest;
 
    PRINTF_TEST( "Sanity Tests" );
-   RETURN_ON_FAIL( xmlWrapperParseFile( _null_, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 0, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 2, _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( xmlWrapperParseFile( "temp.xml", &asTest[2], 2, &sTest ) == FILE_ERROR ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( _null_, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, _null_, _null_, _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 0, _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( pszFileName, &asTest[2], 2, _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( xmlWrapperParseFile( "temp.xml", &asTest[2], 2, &sTest ) == FILE_ERROR ? NO_ERROR : TEST_FAILED );
 
    return NO_ERROR;
 }
@@ -424,10 +424,10 @@ static ERROR_CODE xmlTestBasicSingleLayer( const char *pszFileName )
    DBG_PRINTF( "Heading = [%s]", sBasicFile.szHeading );
    DBG_PRINTF( "Body    = [%s]", sBasicFile.szBody );
 #endif
-   RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
 
 #undef TO       
 #undef FROM     
@@ -490,10 +490,10 @@ static ERROR_CODE xmlTestOutOfOrderSingleLayer( const char *pszFileName )
    DBG_PRINTF( "Heading = [%s]", sBasicFile.szHeading );
    DBG_PRINTF( "Body    = [%s]", sBasicFile.szBody );
 #endif
-   RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szHeading, HEADING ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
 
 #undef TO        
 #undef FROM      
@@ -565,10 +565,10 @@ static ERROR_CODE xmlTestSimpleSubTable( const char *pszFileName )
    DBG_PRINTF( "Heading = [%s]", sBasicFile.sFile.szHeading );
    DBG_PRINTF( "Body    = [%s]", sBasicFile.sFile.szBody );
 #endif
-   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
 
 #undef TO        
 #undef FROM      
@@ -645,11 +645,11 @@ static ERROR_CODE xmlTestSubTableWithSiblingChild( const char *pszFileName )
    DBG_PRINTF( "Heading = [%s]", sBasicFile.sFile.szHeading );
    DBG_PRINTF( "Body    = [%s]", sBasicFile.sFile.szBody );
 #endif
-   RETURN_ON_FAIL( strcmp( sBasicFile.szDetails, DETAILS ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szDetails, DETAILS ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szHeading, HEADING ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sFile.szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
 
 #undef DETAILS
 #undef TO        
@@ -739,14 +739,14 @@ static ERROR_CODE xmlTestSimpleArray( const char *pszFileName )
    DBG_PRINTF( "Body    = [%s]", sBasicFile.asFile[1].szBody );
 #endif
 
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szBody, BODY ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szTo, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szFrom, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szHeading, REHEADING ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szBody, RESPONSE ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szHeading, HEADING ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szTo, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szFrom, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szHeading, REHEADING ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szBody, RESPONSE ) == 0 ? NO_ERROR : TEST_FAILED );
    
 
 #undef TO        
@@ -864,17 +864,17 @@ static ERROR_CODE xmlTestArrayWithSubTableAndSibling( const char *pszFileName )
    DBG_PRINTF( "Body    = [%s]", sBasicFile.asFile[1].szBody );
 #endif
 
-   RETURN_ON_FAIL( strcmp( sBasicFile.szDetails, DETAILS ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sTest.szOne, ONE ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.sTest.szTwo, TWO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szHeading, HEADING ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szBody, BODY ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szTo, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szFrom, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szHeading, REHEADING ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szBody, RESPONSE ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.szDetails, DETAILS ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sTest.szOne, ONE ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.sTest.szTwo, TWO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szHeading, HEADING ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[0].szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szTo, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szFrom, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szHeading, REHEADING ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sBasicFile.asFile[1].szBody, RESPONSE ) == 0 ? NO_ERROR : TEST_FAILED );
    
 #undef TO        
 #undef FROM      
@@ -938,10 +938,10 @@ static ERROR_CODE xmlTestWriteSimpleLayer( const char *pszFileName )
    DBG_PRINTF( "Body =     [%s]", sReadLayer.szBody );
 #endif 
 
-   RETURN_ON_FAIL( strcmp( sReadLayer.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
 
    // Success
 #undef TO
@@ -1010,10 +1010,10 @@ static ERROR_CODE xmlTestWriteSubTable( const char *pszFileName )
    DBG_PRINTF( "Body =     [%s]", sReadLayer.sLayer.szBody );
 #endif 
 
-   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
 
    // Success
 #undef TO
@@ -1097,14 +1097,14 @@ static ERROR_CODE xmlTestWriteArray( const char *pszFileName )
    DBG_PRINTF( "Body =     [%s]", sReadLayer.asLayers[1].szBody );
 #endif 
 
-   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szSubject, SUBJECT ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szBody, BODY ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szTo, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szFrom, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szSubject, REPLY ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szBody, RESPONSE ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szSubject, SUBJECT ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[0].szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szTo, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szFrom, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szSubject, REPLY ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asLayers[1].szBody, RESPONSE ) == 0 ? NO_ERROR : TEST_FAILED );
 
    // Success
 #undef TO
@@ -1209,15 +1209,15 @@ typedef struct
    DBG_PRINTF( "Two =      [%s]", sReadLayer.asDates[1].szTwo );
 #endif 
 
-   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szTo, TO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szFrom, FROM ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szBody, BODY ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.szDetails, DETAILS ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[0].szOne, ONE ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[0].szTwo, TWO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[1].szOne, TWO ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[1].szTwo, ONE ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szTo, TO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szFrom, FROM ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szSubject, SUBJECT ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.sLayer.szBody, BODY ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.szDetails, DETAILS ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[0].szOne, ONE ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[0].szTwo, TWO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[1].szOne, TWO ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( sReadLayer.asDates[1].szTwo, ONE ) == 0 ? NO_ERROR : TEST_FAILED );
 
    // Success
 #undef TO

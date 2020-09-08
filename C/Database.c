@@ -93,7 +93,7 @@ ERROR_CODE CreateDatabaseFile( void )
    }
    else
    {
-      eRet = FAILED;
+      eRet = TEST_FAILED;
    }
 
    return eRet;
@@ -284,13 +284,13 @@ static ERROR_CODE Database_SanityTest( void )
    PRINTF_TEST( "Basic Sanity Testing" );
    
    memset( &s_sList, 0, sizeof( s_sList ) );
-   RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( &sPost ) == NOT_FOUND ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( Database_IsUniquePost( _null_ ) == false ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( Database_AddNewItem( _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( Database_AddNewItem( &sPost ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( Database_UpdateTimesShared( _null_ ) == INVALID_ARG ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( Database_UpdateTimesShared( &sPost ) == INVALID_ARG ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( &sPost ) == NOT_FOUND ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( Database_IsUniquePost( _null_ ) == false ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( Database_AddNewItem( _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( Database_AddNewItem( &sPost ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( Database_UpdateTimesShared( _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( Database_UpdateTimesShared( &sPost ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
 
    return NO_ERROR;
 }
@@ -311,7 +311,7 @@ static ERROR_CODE Database_SimpleComparison( void )
 
    RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( &sPost ) );
 
-   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[1], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[1], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : TEST_FAILED );
 
    return NO_ERROR;
 }
@@ -336,7 +336,7 @@ static ERROR_CODE Database_OldestPostTest()
 
    RETURN_ON_FAIL( Database_GetOldestLeastSharedPost( &sPost ) );
 
-   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[2], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[2], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : TEST_FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
 }
@@ -350,7 +350,7 @@ static ERROR_CODE Database_IsUniqueSimpleTest( void )
    memset( &s_sList, 0, sizeof( s_sList ) );
 
    bRet = Database_IsUniquePost( &sPost );
-   RETURN_ON_FAIL( bRet ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( bRet ? NO_ERROR : TEST_FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
 
@@ -377,7 +377,7 @@ static ERROR_CODE Database_IsUniqueFilledDatabase( void )
 
    memset( &s_sList, 0, sizeof( s_sList ) );
    bRet = Database_IsUniquePost( &sPost );
-   RETURN_ON_FAIL( bRet ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( bRet ? NO_ERROR : TEST_FAILED );
 
    return NO_ERROR;
 }
@@ -403,7 +403,7 @@ static ERROR_CODE Database_IsNotUniqueFilledDatabase( void )
    bRet = Database_IsUniquePost( &sPost );
    
    memset( &s_sList, 0, sizeof( s_sList ) );
-   RETURN_ON_FAIL( !bRet ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( !bRet ? NO_ERROR : TEST_FAILED );
 
    return NO_ERROR;
 }
@@ -416,8 +416,8 @@ static ERROR_CODE Database_AddSimpleItem( void )
    memset( &s_sList, 0, sizeof( s_sList ) );
 
    RETURN_ON_FAIL( Database_AddNewItem( &sPost ) );
-   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[0], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, "1" ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[0], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, "1" ) == 0 ? NO_ERROR : TEST_FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
    return NO_ERROR;
@@ -442,8 +442,8 @@ static ERROR_CODE Database_AddItemToFilledDatabase( void )
    Strcpy_safe( s_sList.szPostCount, "3", sizeof( s_sList.szPostCount ) );
 
    RETURN_ON_FAIL( Database_AddNewItem( &sPost ) );
-   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[0], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, "4" ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[0], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, "4" ) == 0 ? NO_ERROR : TEST_FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
    return NO_ERROR;
@@ -469,8 +469,8 @@ static ERROR_CODE Database_AddItemDatabaseFull()
    snprintf( szTemp, sizeof( szTemp ), "%u", ulCount );
    Strcpy_safe( s_sList.szPostCount, szTemp, sizeof( s_sList.szPostCount ) );
 
-   RETURN_ON_FAIL( Database_AddNewItem( &sPost ) == OVERFLOW ? NO_ERROR : FAILED );
-   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, szTemp ) == 0 ? NO_ERROR : FAILED );
+   RETURN_ON_FAIL( Database_AddNewItem( &sPost ) == OVERFLOW ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( strcmp( s_sList.szPostCount, szTemp ) == 0 ? NO_ERROR : TEST_FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
    
@@ -506,7 +506,7 @@ static ERROR_CODE Database_UpdatePostSimpleTest()
    DBG_PRINTF( "TIMES = [%s]", s_sList.asList[0].szTimesShared );
 #endif
 
-   RETURN_ON_FAIL( ( strcmp( s_sList.asList[0].szTimesShared, TIME ) == 0 ? NO_ERROR : FAILED ) );
+   RETURN_ON_FAIL( ( strcmp( s_sList.asList[0].szTimesShared, TIME ) == 0 ? NO_ERROR : TEST_FAILED ) );
 
 #undef TITLE
 #undef LINK
