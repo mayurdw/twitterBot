@@ -177,5 +177,4 @@ C/Utils/Makefile
 C/Utils/config.xml
 C/out
 C/.vs
-C/*.xml
 Utils/CMakeFiles/*
