@@ -61,6 +61,26 @@ ERROR_CODE Database_Init( void )
    return eRet;
 }
 
+ERROR_CODE Database_RefreshDatabase( void )
+{
+   DATABASE sTemp = {0, };
+
+   char szRSSfeedFile[MAX_FILENAME_LEN + 1] = { 0, };
+
+   // Try to instantiate the database file from xml file
+   RETURN_ON_FAIL( Config_GetRssFilename( szRSSfeedFile, sizeof( szRSSfeedFile ) ) );
+
+   RETURN_ON_FAIL( ReadFeedXmlFile( szRSSfeedFile ) );
+   
+   sTemp = s_sList;
+
+   RETURN_ON_FAIL( ReadDatabaseFile() );
+
+   // For every blog post, find unique posts & add 
+
+   return NO_ERROR;
+}
+
 
 static ERROR_CODE ReadFeedXmlFile( const char *pszFileName )
 {

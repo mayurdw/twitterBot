@@ -68,6 +68,13 @@ bool Database_IsUniquePost(const BLOG_POST *psPost);
 ERROR_CODE Database_UpdateTimesShared( const BLOG_POST *psPost );
 
 /* 
+    Refreshes already initialized database
+    Will re-read the config specified RSS file
+    @return             NO_ERROR    -> Database updated
+ */
+ERROR_CODE Database_RefreshDatabase( void );
+
+/* 
     Database Unit Tests
     @param:             NONE
     @return:            NO_ERROR    -> All unit tests pass
