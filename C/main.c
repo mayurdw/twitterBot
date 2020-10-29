@@ -10,7 +10,7 @@
 
 #define BLOG_FEED_URL            ( "https://itsmayurremember.wordpress.com/feed" )
 #define DAYS_UNTIL_NEXT_UPDATE   ( "14" )
-#define PERFORM_TESTS            ( 1 )
+#define PERFORM_TESTS            ( 0 )
 // Static Functions
 
 // Application flow:
@@ -68,6 +68,7 @@ int main()
       DBG_PRINTF( "Downloading new feed file" );
       RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
       RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
+      RETURN_ON_FAIL( Database_RefreshDatabase() );
    }
    
 
