@@ -28,13 +28,17 @@ static size_t writeStreamToFile( void * pvBuffer, size_t iSize, size_t iNMemb, v
 }
 
 
-ERROR_CODE DownloadFeedFile( const char * pszURL )
+ERROR_CODE DownloadFeedFile( const char * pszURL, const char *pszFilename )
 {
     CURLM * psCurl = _null_;
     CURLcode resCode = CURLE_OK;
     RSS_FILE_STREAM sFileStream = { 0, };
 
-    GenerateFileName( sFileStream.szFileName, sizeof( sFileStream.szFileName ) );
+    RETURN_ON_NULL( pszURL );
+    RETURN_ON_NULL( pszFilename );
+    UTIL_ASSERT( strlen( pszFilename ) > 0, INVALID_ARG );
+
+    snprintf( sFileStream.szFileName, sizeof( sFileStream.szFileName ), "%s", pszFilename );
 
     curl_global_init( CURL_GLOBAL_ALL );
     psCurl = curl_easy_init();

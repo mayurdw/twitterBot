@@ -40,6 +40,15 @@ static ERROR_CODE ReadDatabaseFile( void );
 static ERROR_CODE ReadFeedXmlFile( const char *pszFileName );
 static ERROR_CODE DebugDatabaseFile( void );
 static ERROR_CODE Database_FindIndex( const BLOG_POST *psPost, int32_t *plIndex );
+/* 
+   Counts the number of valid posts in a given list. The count stops at the first invalid post
+   @param (INPUT):      pasList  -> List of Blog Posts
+   @param (INPUT):      ulArraySize -> Max Numberof items in pasList array
+   @param (OUTPUT):     pulCount -> Number of valid posts
+   @return              NO_ERROR -> Success
+   @return              INVALID_PARAM -> One or more parameter is invalid
+ */
+static ERROR_CODE Database_CountPostsInList( const BLOG_POST *pasList, uint32_t ulArraySize, uint32_t *pulCount );
 
 ERROR_CODE Database_Init( void )
 {
@@ -59,6 +68,42 @@ ERROR_CODE Database_Init( void )
    }
 
    return eRet;
+}
+
+ERROR_CODE Database_RefreshDatabase( void )
+{
+   uint32_t ulRssFilePostCount = 0;
+   DATABASE sTemp = {0, };
+   char szRSSfeedFile[MAX_FILENAME_LEN + 1] = { 0, };
+   bool bNeedToRewrite = false;
+
+   memset( &s_sList, 0, sizeof( DATABASE ) );
+
+   // Try to instantiate the database file from xml file
+   RETURN_ON_FAIL( Config_GetRssFilename( szRSSfeedFile, sizeof( szRSSfeedFile ) ) );
+
+   RETURN_ON_FAIL( ReadFeedXmlFile( szRSSfeedFile ) );
+   
+   sTemp = s_sList;
+   RETURN_ON_FAIL( Database_CountPostsInList( sTemp.asList, ARRAY_COUNT( sTemp.asList ), &ulRssFilePostCount ) );
+
+   RETURN_ON_FAIL( ReadDatabaseFile() );
+
+   for( int x = ulRssFilePostCount - 1; x >=0 ; x )
+   {
+      if( Database_IsUniquePost( &sTemp.asList[x] ) )
+      {
+         RETURN_ON_FAIL( Database_AddNewItem( &sTemp.asList[x] ) );
+         bNeedToRewrite = true;
+      }
+   }
+
+   if( bNeedToRewrite )
+   {
+      RETURN_ON_FAIL( CreateDatabaseFile() );
+   }
+
+   return NO_ERROR;
 }
 
 
@@ -81,8 +126,8 @@ ERROR_CODE CreateDatabaseFile( void )
    uint32_t x = 0;
    ERROR_CODE eRet = NO_ERROR;
 
-   // Calculate the number of posts
-   for( x = ARRAY_COUNT( s_sList.asList ); x > 0 && ( strlen( s_sList.asList[x - 1].szTitle ) == 0 ); x-- );
+   RETURN_ON_FAIL( Database_CountPostsInList( s_sList.asList, ARRAY_COUNT( s_sList.asList ), &x ) );
+   
    if( x != 0 )
    {
       DBG_PRINTF( "Writing [%u] posts onto the database file", x );
@@ -93,7 +138,8 @@ ERROR_CODE CreateDatabaseFile( void )
    }
    else
    {
-      eRet = TEST_FAILED;
+      DBG_PRINTF( "Database Count is 0" );
+      eRet = INVALID_ARG;
    }
 
    return eRet;
@@ -187,7 +233,8 @@ static ERROR_CODE Database_FindIndex( const BLOG_POST *psPost, int32_t *plIndex 
 
       for( ; ( !bFound && x < ulCount ); x++ )
       {
-         bFound = memcmp( psPost, &s_sList.asList[x], sizeof( BLOG_POST ) ) == 0;
+         bFound = ( strcmp( psPost->szLink, s_sList.asList[x].szLink ) == 0 && 
+                    strcmp( psPost->szTitle, s_sList.asList[x].szTitle ) == 0 );
       }
 
       *plIndex = bFound ? ( int32_t )--x : -1;
@@ -266,6 +313,21 @@ ERROR_CODE Database_UpdateTimesShared( const BLOG_POST *psPost )
    return NO_ERROR;
 }
 
+static ERROR_CODE Database_CountPostsInList( const BLOG_POST *pasList, uint32_t ulArraySize, uint32_t *pulCount )
+{
+   uint32_t x = 0;
+   
+   RETURN_ON_NULL( pasList );
+   RETURN_ON_NULL( pulCount );
+   UTIL_ASSERT( ulArraySize > 0, INVALID_ARG );
+
+   for( x = ulArraySize; x > 0 && ( strlen( pasList[x - 1].szTitle ) == 0 ); x-- );
+
+   *pulCount = x;
+
+   return NO_ERROR;
+}
+
 ////////////////////////////////////////////////////////////////////////////
 
 
@@ -278,7 +340,7 @@ static uint32_t s_ulTestCount = 0;
 #endif
 
 
-static ERROR_CODE Database_SanityTest( void )
+static ERROR_CODE Database_Test_Sanity( void )
 {
    BLOG_POST sPost = { 0, };
    PRINTF_TEST( "Basic Sanity Testing" );
@@ -291,11 +353,14 @@ static ERROR_CODE Database_SanityTest( void )
    RETURN_ON_FAIL( Database_AddNewItem( &sPost ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
    RETURN_ON_FAIL( Database_UpdateTimesShared( _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
    RETURN_ON_FAIL( Database_UpdateTimesShared( &sPost ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
-
+   RETURN_ON_FAIL( Database_CountPostsInList( _null_, 0, _null_ ) == INVALID_ARG ? NO_ERROR: TEST_FAILED );
+   RETURN_ON_FAIL( Database_CountPostsInList( s_sList.asList, 0, _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   RETURN_ON_FAIL( Database_CountPostsInList( s_sList.asList, ARRAY_COUNT( s_sList.asList ), _null_ ) == INVALID_ARG ? NO_ERROR : TEST_FAILED );
+   
    return NO_ERROR;
 }
 
-static ERROR_CODE Database_SimpleComparison( void )
+static ERROR_CODE Database_Test_SimpleComparison( void )
 {
    BLOG_POST sPost = { 0, };
 
@@ -316,7 +381,7 @@ static ERROR_CODE Database_SimpleComparison( void )
    return NO_ERROR;
 }
 
-static ERROR_CODE Database_OldestPostTest()
+static ERROR_CODE Database_Test_OldestPost()
 {
    BLOG_POST sPost = {0, };
 
@@ -339,9 +404,11 @@ static ERROR_CODE Database_OldestPostTest()
    RETURN_ON_FAIL( memcmp( &sPost, &s_sList.asList[2], sizeof( BLOG_POST ) ) == 0 ? NO_ERROR : TEST_FAILED );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
+
+   return NO_ERROR;
 }
 
-static ERROR_CODE Database_IsUniqueSimpleTest( void )
+static ERROR_CODE Database_Test_IsUniqueSimple( void )
 {
    BLOG_POST sPost = { "Unique Title", "Unique Link", "0" };
    bool bRet = false;
@@ -357,7 +424,7 @@ static ERROR_CODE Database_IsUniqueSimpleTest( void )
    return NO_ERROR;
 }
 
-static ERROR_CODE Database_IsUniqueFilledDatabase( void )
+static ERROR_CODE Database_Test_IsUniqueFilledDatabase( void )
 {
    bool bRet = false;
    BLOG_POST sPost = { "UNIQUE TITLE", "UNIQUE LINK", "0" };
@@ -382,7 +449,7 @@ static ERROR_CODE Database_IsUniqueFilledDatabase( void )
    return NO_ERROR;
 }
 
-static ERROR_CODE Database_IsNotUniqueFilledDatabase( void )
+static ERROR_CODE Database_Test_IsNotUniqueFilledDatabase( void )
 {
    bool bRet = false;
    BLOG_POST sPost = { "TITLE 2", "LINK 2", "1" };
@@ -408,7 +475,7 @@ static ERROR_CODE Database_IsNotUniqueFilledDatabase( void )
    return NO_ERROR;
 }
 
-static ERROR_CODE Database_AddSimpleItem( void )
+static ERROR_CODE Database_Test_AddSimpleItem( void )
 {
    BLOG_POST sPost = { "NEW TITLE", "NEW LINK", "0" };
 
@@ -423,7 +490,7 @@ static ERROR_CODE Database_AddSimpleItem( void )
    return NO_ERROR;
 }
 
-static ERROR_CODE Database_AddItemToFilledDatabase( void )
+static ERROR_CODE Database_Test_AddItemToFilledDatabase( void )
 {
    BLOG_POST sPost = { "NEW TITLE", "NEW LINK", "0" };
 
@@ -449,7 +516,7 @@ static ERROR_CODE Database_AddItemToFilledDatabase( void )
    return NO_ERROR;
 }
 
-static ERROR_CODE Database_AddItemDatabaseFull() 
+static ERROR_CODE Database_Test_AddItemDatabaseFull() 
 {
    BLOG_POST sPost = { "UNIQUE TITLE", "UNIQUE TEST", "0" };
    char szTemp[32 + 1] = { 0, };
@@ -477,7 +544,7 @@ static ERROR_CODE Database_AddItemDatabaseFull()
    return NO_ERROR;
 }
 
-static ERROR_CODE Database_UpdatePostSimpleTest() 
+static ERROR_CODE Database_Test_UpdatePostSimple() 
 {
 #define TITLE "TEST_TITLE"
 #define LINK  "TEST LINK"
@@ -515,20 +582,44 @@ static ERROR_CODE Database_UpdatePostSimpleTest()
    return NO_ERROR;
 }
 
+static ERROR_CODE Database_Test_CountList( void )
+{
+   BLOG_POST asList[20] = {0, };
+   const uint32_t ulFillCount = 5;
+   uint32_t ulReturnedCount = 0;
+
+   PRINTF_TEST( "Simple Test to count the number of items" );
+
+   for( int x = 0; x < ulFillCount; x++ )
+   {
+      snprintf( asList[x].szTitle, sizeof( asList[x].szTitle ), "Title %u", x );
+   }
+
+   RETURN_ON_FAIL( Database_CountPostsInList( asList, ARRAY_COUNT( asList ), &ulReturnedCount ) );
+#if DEBUG_DATABASE
+   DBG_PRINTF( "Returned Count = %u & Filled Count = %u", ulReturnedCount, ulFillCount );
+#endif
+
+   RETURN_ON_FAIL( ulReturnedCount == ulFillCount ? NO_ERROR : TEST_FAILED );
+
+   return NO_ERROR;
+}
+
 ERROR_CODE Database_Tests( void )
 {
    memset( &s_sList, 0, sizeof( s_sList ) );
    
-   RETURN_ON_FAIL( Database_SanityTest() );
-   RETURN_ON_FAIL( Database_SimpleComparison() );
-   RETURN_ON_FAIL( Database_OldestPostTest() );
-   RETURN_ON_FAIL( Database_IsUniqueSimpleTest() );
-   RETURN_ON_FAIL( Database_IsUniqueFilledDatabase() );
-   RETURN_ON_FAIL( Database_IsNotUniqueFilledDatabase() );
-   RETURN_ON_FAIL( Database_AddSimpleItem() );
-   RETURN_ON_FAIL( Database_AddItemToFilledDatabase() );
-   RETURN_ON_FAIL( Database_AddItemDatabaseFull() );
-   RETURN_ON_FAIL( Database_UpdatePostSimpleTest() );
+   RETURN_ON_FAIL( Database_Test_Sanity() );
+   RETURN_ON_FAIL( Database_Test_SimpleComparison() );
+   RETURN_ON_FAIL( Database_Test_OldestPost() );
+   RETURN_ON_FAIL( Database_Test_IsUniqueSimple() );
+   RETURN_ON_FAIL( Database_Test_IsUniqueFilledDatabase() );
+   RETURN_ON_FAIL( Database_Test_IsNotUniqueFilledDatabase() );
+   RETURN_ON_FAIL( Database_Test_AddSimpleItem() );
+   RETURN_ON_FAIL( Database_Test_AddItemToFilledDatabase() );
+   RETURN_ON_FAIL( Database_Test_AddItemDatabaseFull() );
+   RETURN_ON_FAIL( Database_Test_UpdatePostSimple() );
+   RETURN_ON_FAIL( Database_Test_CountList() );
 
    memset( &s_sList, 0, sizeof( s_sList ) );
    DBG_PRINTF( "------------- %s: [%u] Tests passed -------------", __func__, s_ulTestCount );
