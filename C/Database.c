@@ -89,11 +89,11 @@ ERROR_CODE Database_RefreshDatabase( void )
 
    RETURN_ON_FAIL( ReadDatabaseFile() );
 
-   for( int x = 0; x < ulRssFilePostCount; x++ )
+   for( int x = ulRssFilePostCount - 1; x >=0 ; x )
    {
       if( Database_IsUniquePost( &sTemp.asList[x] ) )
       {
-         RETURN_ON_FAIL( Database_AddNewItem( &s_sList.asList[x] ) );
+         RETURN_ON_FAIL( Database_AddNewItem( &sTemp.asList[x] ) );
          bNeedToRewrite = true;
       }
    }
@@ -233,7 +233,8 @@ static ERROR_CODE Database_FindIndex( const BLOG_POST *psPost, int32_t *plIndex 
 
       for( ; ( !bFound && x < ulCount ); x++ )
       {
-         bFound = memcmp( psPost, &s_sList.asList[x], sizeof( BLOG_POST ) ) == 0;
+         bFound = ( strcmp( psPost->szLink, s_sList.asList[x].szLink ) == 0 && 
+                    strcmp( psPost->szTitle, s_sList.asList[x].szTitle ) == 0 );
       }
 
       *plIndex = bFound ? ( int32_t )--x : -1;

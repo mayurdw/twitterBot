@@ -61,14 +61,21 @@ int main()
 #else
 
    RETURN_ON_FAIL( Config_Init() );
-   RETURN_ON_FAIL( Database_Init( ) );
 
    if( IsNewFileRequired() )
    {
+      char szFilename[MAX_FILENAME_LEN + 1] = { 0, };
+
       DBG_PRINTF( "Downloading new feed file" );
-      RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL ) );
+      RETURN_ON_FAIL( GenerateFileName( szFilename, sizeof( szFilename ) ) );
+      RETURN_ON_FAIL( DownloadFeedFile( BLOG_FEED_URL, szFilename ) );
       RETURN_ON_FAIL( Config_SetDaysUntilUpdate( DAYS_UNTIL_NEXT_UPDATE ) );
+      RETURN_ON_FAIL( Config_SetRssFilename( szFilename ) );
       RETURN_ON_FAIL( Database_RefreshDatabase() );
+   } 
+   else
+   {
+      RETURN_ON_FAIL( Database_Init( ) );
    }
    
 
