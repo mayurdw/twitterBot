@@ -28,12 +28,36 @@ typedef enum
 } ERROR_CODE;
 
 #define _null_ 0
+#if _DEBUG
 #define DBG_PRINTF(x, ...)                                \
     {                                                     \
         Dbg_printf(__func__, __LINE__, x, ##__VA_ARGS__); \
     }
-#define RETURN(x) (return x);
+#define DBG_INIT()  \
+    {               \
+        Dbg_Init(); \
+    }
+#else
+#define DBG_PRINTF(x, ...)                                \
+    {                                                     \
+    }
+#define DBG_INIT()  \
+    {               \
+    }
+
+#endif
+#define UTIL_ASSERT(x, y) \
+    {                     \
+        if (!x)           \
+            return y;     \
+    }
+#define RETURN_ON_NULL(x)                \
+    {                                    \
+        if (x == _null_)                 \
+            RETURN_ON_FAIL(INVALID_ARG); \
+    }
 #define ISERROR(x) (x != NO_ERROR)
+#define RETURN(x) (return x);
 #define RETURN_ON_FAIL(x)                     \
     {                                         \
         if (ISERROR(x))                       \
@@ -42,20 +66,7 @@ typedef enum
             return x;                         \
         }                                     \
     }
-#define RETURN_ON_NULL(x)                \
-    {                                    \
-        if (x == _null_)                 \
-            RETURN_ON_FAIL(INVALID_ARG); \
-    }
-#define UTIL_ASSERT(x, y) \
-    {                     \
-        if (!x)           \
-            return y;     \
-    }
-#define DBG_INIT()  \
-    {               \
-        Dbg_Init(); \
-    }
+
 #define ARRAY_COUNT(x) sizeof(x) / sizeof(x[0])
 
 /* 
