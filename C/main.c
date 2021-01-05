@@ -45,7 +45,7 @@ static ERROR_CODE readyPostForPublishing()
    DBG_PRINTF( "Link  = [%s]", sPost.szLink );
 
    DBG_PRINTF( "Tweet Text = " );
-   DBG_PRINTF( "From the archives of my blog: '%s'\n\n%s", sPost.szTitle, sPost.szLink );
+   printf( "From the archives of my blog: '%s'\n\n%s\n", sPost.szTitle, sPost.szLink );
    
 
    return NO_ERROR;
