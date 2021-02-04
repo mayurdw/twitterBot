@@ -1,1 +1,1 @@
-wsl.exe -e ./TwitterBot | clip.exe
+wsl.exe -e ./TwitterBot | clip
